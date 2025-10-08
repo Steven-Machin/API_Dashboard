@@ -119,8 +119,53 @@
               <h5 class="card-title mb-0">Crypto Prices</h5>
             </div>
             <div class="card-body">
-              <p class="card-text text-muted mb-4">Loading data...</p>
-              <button type="button" class="btn btn-sm btn-outline-primary btn-refresh" disabled>
+              {% set btc_price = (crypto_prices or {}).get('bitcoin', {}).get('usd') %}
+              {% set eth_price = (crypto_prices or {}).get('ethereum', {}).get('usd') %}
+              {% set formatted_updated = crypto_last_updated.strftime('%Y-%m-%d %H:%M:%S UTC') if crypto_last_updated else None %}
+
+              <div class="mb-4">
+                <div class="d-flex align-items-center justify-content-between">
+                  <div>
+                    <p class="text-uppercase small text-muted mb-1">Bitcoin</p>
+                    <p class="fs-3 fw-semibold text-dark mb-0" id="crypto-price-btc">
+                      {% if btc_price is not none %}
+                      ${{ '%.2f'|format(btc_price) }}
+                      {% else %}
+                      N/A
+                      {% endif %}
+                    </p>
+                  </div>
+                  <i class="fa-brands fa-bitcoin text-warning fs-2"></i>
+                </div>
+                <hr class="my-4 opacity-25">
+                <div class="d-flex align-items-center justify-content-between">
+                  <div>
+                    <p class="text-uppercase small text-muted mb-1">Ethereum</p>
+                    <p class="fs-4 fw-semibold text-dark mb-0" id="crypto-price-eth">
+                      {% if eth_price is not none %}
+                      ${{ '%.2f'|format(eth_price) }}
+                      {% else %}
+                      N/A
+                      {% endif %}
+                    </p>
+                  </div>
+                  <i class="fa-brands fa-ethereum text-secondary fs-2"></i>
+                </div>
+              </div>
+
+              <p class="text-muted small mb-3" id="crypto-last-updated">
+                {% if formatted_updated %}
+                Last updated {{ formatted_updated }}
+                {% else %}
+                Last updated: unavailable
+                {% endif %}
+              </p>
+
+              <button
+                type="button"
+                class="btn btn-sm btn-outline-primary btn-refresh"
+                data-refresh-endpoint="{{ url_for('crypto.crypto') }}"
+              >
                 Refresh
               </button>
             </div>
@@ -174,5 +219,78 @@
       integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL"
       crossorigin="anonymous"
     ></script>
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        const refreshButton = document.querySelector("[data-refresh-endpoint]");
+        if (!refreshButton) return;
+
+        const btcPriceEl = document.getElementById("crypto-price-btc");
+        const ethPriceEl = document.getElementById("crypto-price-eth");
+        const updatedEl = document.getElementById("crypto-last-updated");
+
+        const formatCurrency = (value) =>
+          new Intl.NumberFormat("en-US", {
+            style: "currency",
+            currency: "USD",
+            maximumFractionDigits: 2,
+          }).format(value);
+
+        refreshButton.addEventListener("click", async () => {
+          const endpoint = refreshButton.dataset.refreshEndpoint;
+          if (!endpoint) return;
+
+          refreshButton.disabled = true;
+          refreshButton.classList.add("disabled");
+
+          try {
+            const response = await fetch(endpoint, { cache: "no-store" });
+            if (!response.ok) {
+              throw new Error(`Request failed: ${response.status}`);
+            }
+            const payload = await response.json();
+
+            const btc = payload?.bitcoin?.usd;
+            const eth = payload?.ethereum?.usd;
+
+            if (btcPriceEl) {
+              btcPriceEl.textContent =
+                typeof btc === "number" ? formatCurrency(btc) : "N/A";
+            }
+            if (ethPriceEl) {
+              ethPriceEl.textContent =
+                typeof eth === "number" ? formatCurrency(eth) : "N/A";
+            }
+
+            if (updatedEl) {
+              const timestamp = payload?.last_updated
+                ? new Date(payload.last_updated)
+                : new Date();
+              const formatter = new Intl.DateTimeFormat("en-US", {
+                year: "numeric",
+                month: "2-digit",
+                day: "2-digit",
+                hour: "2-digit",
+                minute: "2-digit",
+                second: "2-digit",
+                hour12: false,
+                timeZoneName: "short",
+              });
+              updatedEl.textContent = `Last updated ${formatter.format(
+                timestamp
+              )}`;
+            }
+          } catch (error) {
+            console.error("Failed to refresh crypto prices:", error);
+            if (updatedEl) {
+              updatedEl.textContent =
+                "Last updated: unable to refresh at this time.";
+            }
+          } finally {
+            refreshButton.disabled = false;
+            refreshButton.classList.remove("disabled");
+          }
+        });
+      });
+    </script>
   </body>
 </html>
