@@ -10,6 +10,89 @@
       integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1G8qonJ8aFOBvawt1yXQXg6"
       crossorigin="anonymous"
     >
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+      integrity="sha512-DTOQO9RWCH3ppGqcWaEA1B7e1Z3s2L4LhOUCFpC/6pP9Gfj5wla3V7R5M1F2xZJ1Ao0P5PLf4psJ3A2w3R0F0A=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    >
+    <style>
+      :root {
+        --crypto-grad: linear-gradient(135deg, #0f766e, #fbbf24);
+        --weather-grad: linear-gradient(135deg, #38bdf8, #fde68a);
+        --news-grad: linear-gradient(135deg, #1e293b, #0f172a);
+      }
+
+      .card-section {
+        border: 0;
+        border-radius: 1rem;
+        box-shadow: 0 12px 30px -12px rgba(15, 23, 42, 0.35);
+        color: #0f172a;
+        min-height: 100%;
+        overflow: hidden;
+      }
+
+      .card-section[data-theme="crypto"] .card-header {
+        background: var(--crypto-grad);
+        color: #0f172a;
+      }
+
+      .card-section[data-theme="weather"] .card-header {
+        background: var(--weather-grad);
+        color: #0f172a;
+      }
+
+      .card-section[data-theme="news"] .card-header {
+        background: var(--news-grad);
+        color: #e2e8f0;
+      }
+
+      .card-header {
+        border: 0;
+        padding: 1.5rem;
+      }
+
+      .card-icon {
+        font-size: 2rem;
+        margin-right: 0.75rem;
+      }
+
+      .card-title {
+        font-size: 1.15rem;
+        margin: 0;
+      }
+
+      .card-body {
+        padding: 1.75rem 1.5rem;
+        background: rgba(255, 255, 255, 0.82);
+      }
+
+      .btn-refresh {
+        border-radius: 999px;
+        transition: transform 180ms ease, box-shadow 180ms ease;
+      }
+
+      .btn-refresh:hover,
+      .btn-refresh:focus-visible {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 16px -8px rgba(59, 130, 246, 0.6);
+      }
+
+      .btn-refresh:disabled {
+        opacity: 0.7;
+      }
+
+      @media (max-width: 576px) {
+        .card-body {
+          padding: 1.5rem;
+        }
+
+        .display-5 {
+          font-size: 2rem;
+        }
+      }
+    </style>
   </head>
   <body class="bg-light d-flex flex-column min-vh-100">
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
@@ -28,13 +111,16 @@
 
       <div class="row g-4 justify-content-center">
         <div class="col-12 col-md-6 col-lg-4">
-          <div class="card shadow-sm border-0 h-100">
-            <div class="card-header bg-white border-0">
+          <div class="card card-section h-100" data-theme="crypto">
+            <div class="card-header d-flex align-items-center">
+              <span class="card-icon">
+                <i class="fa-solid fa-coins"></i>
+              </span>
               <h5 class="card-title mb-0">Crypto Prices</h5>
             </div>
             <div class="card-body">
               <p class="card-text text-muted mb-4">Loading data...</p>
-              <button type="button" class="btn btn-sm btn-outline-primary" disabled>
+              <button type="button" class="btn btn-sm btn-outline-primary btn-refresh" disabled>
                 Refresh
               </button>
             </div>
@@ -42,13 +128,16 @@
         </div>
 
         <div class="col-12 col-md-6 col-lg-4">
-          <div class="card shadow-sm border-0 h-100">
-            <div class="card-header bg-white border-0">
+          <div class="card card-section h-100" data-theme="weather">
+            <div class="card-header d-flex align-items-center">
+              <span class="card-icon">
+                <i class="fa-solid fa-cloud-sun"></i>
+              </span>
               <h5 class="card-title mb-0">Weather Forecast</h5>
             </div>
             <div class="card-body">
               <p class="card-text text-muted mb-4">Loading data...</p>
-              <button type="button" class="btn btn-sm btn-outline-primary" disabled>
+              <button type="button" class="btn btn-sm btn-outline-primary btn-refresh" disabled>
                 Refresh
               </button>
             </div>
@@ -56,13 +145,16 @@
         </div>
 
         <div class="col-12 col-md-6 col-lg-4">
-          <div class="card shadow-sm border-0 h-100">
-            <div class="card-header bg-white border-0">
+          <div class="card card-section h-100" data-theme="news">
+            <div class="card-header d-flex align-items-center">
+              <span class="card-icon">
+                <i class="fa-solid fa-newspaper"></i>
+              </span>
               <h5 class="card-title mb-0">News Headlines</h5>
             </div>
             <div class="card-body">
               <p class="card-text text-muted mb-4">Loading data...</p>
-              <button type="button" class="btn btn-sm btn-outline-primary" disabled>
+              <button type="button" class="btn btn-sm btn-outline-primary btn-refresh" disabled>
                 Refresh
               </button>
             </div>
