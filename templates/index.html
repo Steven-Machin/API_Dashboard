@@ -68,6 +68,48 @@
         background: rgba(255, 255, 255, 0.82);
       }
 
+      .news-headlines {
+        display: grid;
+        gap: 1rem;
+      }
+
+      .news-headline-item {
+        border-bottom: 1px solid rgba(148, 163, 184, 0.35);
+        padding-bottom: 0.75rem;
+      }
+
+      .news-headline-item:last-child {
+        border-bottom: 0;
+        padding-bottom: 0;
+      }
+
+      .news-headline-link {
+        color: #0f172a;
+        font-weight: 600;
+        text-decoration: none;
+        word-break: break-word;
+      }
+
+      .news-headline-link:hover,
+      .news-headline-link:focus-visible {
+        color: #1d4ed8;
+        text-decoration: underline;
+      }
+
+      .news-headline-meta {
+        color: #64748b;
+        font-size: 0.85rem;
+        margin-top: 0.35rem;
+        word-break: break-word;
+      }
+
+      .news-headline-description {
+        color: #475569;
+        font-size: 0.9rem;
+        margin-top: 0.5rem;
+        word-break: break-word;
+      }
+
       .btn-refresh {
         border-radius: 999px;
         transition: transform 180ms ease, box-shadow 180ms ease;
@@ -252,20 +294,68 @@
         </div>
 
         <div class="col-12 col-md-6 col-lg-4">
-          <div class="card card-section h-100" data-theme="news">
-            <div class="card-header d-flex align-items-center">
-              <span class="card-icon">
-                <i class="fa-solid fa-newspaper"></i>
-              </span>
-              <h5 class="card-title mb-0">News Headlines</h5>
+            <div class="card card-section h-100" data-theme="news">
+              <div class="card-header d-flex align-items-center">
+                <span class="card-icon">
+                  <i class="fa-solid fa-newspaper"></i>
+                </span>
+                <h5 class="card-title mb-0">News Headlines</h5>
+              </div>
+              <div class="card-body">
+                {% set news_items = (news_headlines or []) %}
+                {% set formatted_news_updated = news_last_updated.strftime('%Y-%m-%d %H:%M:%S UTC') if news_last_updated else None %}
+                <div class="d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-2 mb-3">
+                  <small id="news-last-updated" class="text-muted">
+                    {% if formatted_news_updated %}
+                      Last updated {{ formatted_news_updated }}
+                    {% else %}
+                      Last updated data unavailable
+                    {% endif %}
+                  </small>
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-outline-primary btn-refresh ms-sm-auto"
+                    data-refresh-endpoint="/news"
+                    data-refresh-type="news"
+                    aria-label="Refresh news headlines"
+                  >
+                    <i class="fa-solid fa-rotate-right me-1"></i>
+                    Refresh
+                  </button>
+                </div>
+                <ul
+                  id="news-headlines"
+                  class="news-headlines list-unstyled mb-0 {% if not news_items %}d-none{% endif %}"
+                >
+                  {% for headline in news_items[:5] %}
+                    <li class="news-headline-item">
+                      <a
+                        href="{{ headline.url }}"
+                        class="news-headline-link"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        {{ headline.title or "Read more" }}
+                      </a>
+                      {% if headline.source %}
+                        <div class="news-headline-meta">{{ headline.source }}</div>
+                      {% endif %}
+                      {% if headline.description %}
+                        <p class="news-headline-description mb-0">
+                          {{ headline.description }}
+                        </p>
+                      {% endif %}
+                    </li>
+                  {% endfor %}
+                </ul>
+                <p
+                  id="news-empty-state"
+                  class="text-muted mb-0 {% if news_items %}d-none{% endif %}"
+                >
+                  No headlines available right now. Try refreshing in a moment.
+                </p>
+              </div>
             </div>
-            <div class="card-body">
-              <p class="card-text text-muted mb-4">Loading data...</p>
-              <button type="button" class="btn btn-sm btn-outline-primary btn-refresh" disabled>
-                Refresh
-              </button>
-            </div>
-          </div>
         </div>
       </div>
     </main>
@@ -389,6 +479,76 @@
               )}`;
             }
           },
+          news: (payload) => {
+            const listEl = document.getElementById("news-headlines");
+            const emptyStateEl = document.getElementById("news-empty-state");
+            const updatedEl = document.getElementById("news-last-updated");
+            const headlines = Array.isArray(payload?.headlines)
+              ? payload.headlines.slice(0, 5)
+              : [];
+
+            if (updatedEl) {
+              const timestamp = payload?.last_updated;
+              updatedEl.textContent = headlines.length
+                ? `Last updated ${formatTimestamp(timestamp)}`
+                : "Last updated: no fresh headlines.";
+            }
+
+            if (listEl) {
+              listEl.innerHTML = "";
+            }
+
+            if (headlines.length && listEl) {
+              headlines.forEach((item) => {
+                if (!item?.url) return;
+
+                const li = document.createElement("li");
+                li.className = "news-headline-item";
+
+                const link = document.createElement("a");
+                link.className = "news-headline-link";
+                link.href = item.url;
+                link.target = "_blank";
+                link.rel = "noopener noreferrer";
+                link.textContent = item.title || "Read more";
+
+                li.appendChild(link);
+
+                if (item.source) {
+                  const sourceEl = document.createElement("div");
+                  sourceEl.className = "news-headline-meta";
+                  sourceEl.textContent = item.source;
+                  li.appendChild(sourceEl);
+                }
+
+                if (item.description) {
+                  const descEl = document.createElement("p");
+                  descEl.className = "news-headline-description mb-0";
+                  descEl.textContent = item.description;
+                  li.appendChild(descEl);
+                }
+
+                listEl.appendChild(li);
+              });
+
+              listEl.classList.remove("d-none");
+              if (emptyStateEl) {
+                emptyStateEl.classList.add("d-none");
+                emptyStateEl.textContent =
+                  "No headlines available right now. Try refreshing in a moment.";
+              }
+            } else {
+              if (listEl) {
+                listEl.classList.add("d-none");
+                listEl.innerHTML = "";
+              }
+              if (emptyStateEl) {
+                emptyStateEl.classList.remove("d-none");
+                emptyStateEl.textContent =
+                  "No headlines available right now. Try refreshing in a moment.";
+              }
+            }
+          },
         };
 
         buttons.forEach((button) => {
@@ -407,21 +567,42 @@
               }
               const payload = await response.json();
               updaters[type](payload);
-            } catch (error) {
-              console.error(`Failed to refresh ${type} data:`, error);
-              const updatedEl =
-                type === "crypto"
-                  ? document.getElementById("crypto-last-updated")
-                  : document.getElementById("weather-last-updated");
-              if (updatedEl) {
-                updatedEl.textContent =
-                  "Last updated: unable to refresh at this time.";
+              } catch (error) {
+                console.error(`Failed to refresh ${type} data:`, error);
+                const updatedElementId =
+                  type === "crypto"
+                    ? "crypto-last-updated"
+                    : type === "weather"
+                    ? "weather-last-updated"
+                    : type === "news"
+                    ? "news-last-updated"
+                    : "";
+                if (updatedElementId) {
+                  const updatedEl = document.getElementById(updatedElementId);
+                  if (updatedEl) {
+                    updatedEl.textContent =
+                      "Last updated: unable to refresh at this time.";
+                  }
+                }
+                if (type === "news") {
+                  const listEl = document.getElementById("news-headlines");
+                  const emptyStateEl =
+                    document.getElementById("news-empty-state");
+                  if (listEl) {
+                    listEl.classList.add("d-none");
+                    listEl.innerHTML = "";
+                  }
+                  if (emptyStateEl) {
+                    emptyStateEl.classList.remove("d-none");
+                    emptyStateEl.textContent =
+                      "Unable to load headlines right now. Please try again soon.";
+                  }
+                }
+              } finally {
+                button.disabled = false;
+                button.classList.remove("disabled");
               }
-            } finally {
-              button.disabled = false;
-              button.classList.remove("disabled");
-            }
-          });
+            });
         });
       });
     </script>
