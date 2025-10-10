@@ -85,6 +85,45 @@
         }
       }
 
+      .refresh-toast {
+        border: 0;
+        border-radius: 0.75rem;
+        color: #f8fafc;
+        font-weight: 600;
+        min-width: 240px;
+        padding: 0;
+      }
+
+      .refresh-toast .toast-body {
+        align-items: center;
+        display: flex;
+        gap: 0.75rem;
+        justify-content: space-between;
+        padding: 0.9rem 1rem;
+      }
+
+      .refresh-toast .toast-label {
+        font-size: 0.8rem;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      .refresh-toast.toast-crypto {
+        background-color: #0f766e;
+      }
+
+      .refresh-toast.toast-weather {
+        background-color: #1d4ed8;
+      }
+
+      .refresh-toast.toast-news {
+        background-color: #1e293b;
+      }
+
+      .refresh-toast.toast-error {
+        background-color: #dc2626;
+      }
+
       .card-section[data-theme="crypto"] .card-header {
         background: var(--crypto-grad);
         color: #0f172a;
@@ -433,17 +472,20 @@
     <div class="position-fixed top-0 end-0 p-3" style="z-index: 1200">
       <div
         id="refresh-toast"
-        class="toast align-items-center text-bg-danger border-0 fade"
+        class="toast refresh-toast fade"
         role="status"
         aria-live="assertive"
         aria-atomic="true"
-        data-bs-delay="2200"
+        data-bs-delay="3000"
       >
-        <div class="d-flex">
-          <div id="refresh-toast-message" class="toast-body">Failed to load</div>
+        <div class="toast-body">
+          <div class="me-3">
+            <span id="refresh-toast-label" class="toast-label d-block">Status</span>
+            <span id="refresh-toast-message" class="small">Ready</span>
+          </div>
           <button
             type="button"
-            class="btn-close btn-close-white me-2 m-auto"
+            class="btn-close btn-close-white ms-auto"
             data-bs-dismiss="toast"
             aria-label="Close"
           ></button>
@@ -469,18 +511,43 @@
 
         const { Toast: BootstrapToast } = window.bootstrap || {};
         const toastEl = document.getElementById("refresh-toast");
+        const toastLabelEl = document.getElementById("refresh-toast-label");
         const toastMessageEl = document.getElementById("refresh-toast-message");
-        const failureToast =
+        const toastInstance =
           toastEl && BootstrapToast
-            ? BootstrapToast.getOrCreateInstance(toastEl, { delay: 2200 })
+            ? BootstrapToast.getOrCreateInstance(toastEl, { animation: true, autohide: true, delay: 3000 })
             : null;
+        const toastVariants = {
+          crypto: { className: "toast-crypto", label: "Crypto" },
+          weather: { className: "toast-weather", label: "Weather" },
+          news: { className: "toast-news", label: "News" },
+          error: { className: "toast-error", label: "Refresh Failed" },
+        };
+        const toastVariantClasses = Object.values(toastVariants).map((item) => item.className);
 
-        const showFailureToast = (message = "Failed to load") => {
-          if (toastMessageEl) {
-            toastMessageEl.textContent = message;
+        const showRefreshToast = (variant, message) => {
+          if (!toastInstance || !toastEl || !toastMessageEl) return;
+          const config = toastVariants[variant] || toastVariants.error;
+          toastEl.classList.remove(...toastVariantClasses);
+          if (config?.className) {
+            toastEl.classList.add(config.className);
           }
-          if (failureToast) {
-            failureToast.show();
+          if (toastLabelEl && config?.label) {
+            toastLabelEl.textContent = config.label;
+          }
+          toastMessageEl.textContent = message || "Updated";
+
+          if (toastEl.classList.contains("show")) {
+            toastEl.addEventListener(
+              "hidden.bs.toast",
+              () => {
+                toastInstance.show();
+              },
+              { once: true }
+            );
+            toastInstance.hide();
+          } else {
+            toastInstance.show();
           }
         };
 
@@ -502,6 +569,11 @@
           window.setTimeout(() => {
             card.classList.remove(className);
           }, 900);
+        };
+        const successMessages = {
+          crypto: "Crypto data refreshed",
+          weather: "Weather forecast updated",
+          news: "News headlines refreshed",
         };
 
         const formatCurrency = (value) =>
@@ -696,6 +768,8 @@
               const payload = await response.json();
               updaters[type](payload);
               triggerCardFlash(card, "success");
+              const successMessage = successMessages[type] || "Refresh complete";
+              showRefreshToast(type in successMessages ? type : "crypto", successMessage);
             } catch (error) {
               console.error(`Failed to refresh ${type} data:`, error);
               const updatedElementId =
@@ -726,7 +800,15 @@
                 }
               }
               triggerCardFlash(card, "error");
-              showFailureToast();
+              const failureMessage =
+                type === "crypto"
+                  ? "Unable to refresh crypto right now."
+                  : type === "weather"
+                  ? "Unable to refresh weather right now."
+                  : type === "news"
+                  ? "Unable to refresh news right now."
+                  : "Refresh failed.";
+              showRefreshToast("error", failureMessage);
             } finally {
               setRefreshingState(card, false);
               button.disabled = false;
