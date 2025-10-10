@@ -85,6 +85,26 @@
         }
       }
 
+      .timestamp-text {
+        transition: color 0.4s ease;
+      }
+
+      .timestamp-flash {
+        animation: timestampPulse 0.9s ease;
+      }
+
+      @keyframes timestampPulse {
+        0% {
+          color: #64748b;
+        }
+        40% {
+          color: #0f172a;
+        }
+        100% {
+          color: #64748b;
+        }
+      }
+
       .refresh-toast {
         border: 0;
         border-radius: 0.75rem;
@@ -229,8 +249,19 @@
   </head>
   <body class="bg-light d-flex flex-column min-vh-100">
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
-      <div class="container py-2">
-        <a class="navbar-brand fw-semibold" href="#">API Dashboard</a>
+      <div class="container py-2 d-flex align-items-center justify-content-between gap-3">
+        <a class="navbar-brand fw-semibold mb-0" href="#">API Dashboard</a>
+        <div class="form-check form-switch text-white-50 ms-auto small">
+          <input
+            class="form-check-input"
+            type="checkbox"
+            role="switch"
+            id="auto-refresh-toggle"
+          >
+          <label class="form-check-label ms-2" for="auto-refresh-toggle">
+            Auto refresh
+          </label>
+        </div>
       </div>
     </nav>
 
@@ -292,7 +323,7 @@
                 </div>
               </div>
 
-              <p class="text-muted small mb-3" id="crypto-last-updated">
+              <p class="text-muted small mb-3 timestamp-text" id="crypto-last-updated">
                 {% if formatted_updated %}
                 Last updated {{ formatted_updated }}
                 {% else %}
@@ -376,7 +407,7 @@
                 </span>
               </div>
 
-              <p class="text-muted small mb-3" id="weather-last-updated">
+              <p class="text-muted small mb-3 timestamp-text" id="weather-last-updated">
                 {% if weather_updated %}
                 Last updated {{ weather_updated }}
                 {% else %}
@@ -414,7 +445,7 @@
                 {% set news_items = (news_headlines or []) %}
                 {% set formatted_news_updated = news_last_updated.strftime('%Y-%m-%d %H:%M:%S UTC') if news_last_updated else None %}
                 <div class="d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-2 mb-3">
-                  <small id="news-last-updated" class="text-muted">
+                  <small id="news-last-updated" class="text-muted timestamp-text">
                     {% if formatted_news_updated %}
                       Last updated {{ formatted_news_updated }}
                     {% else %}
@@ -424,7 +455,7 @@
                   <button
                     type="button"
                     class="btn btn-sm btn-outline-primary btn-refresh ms-sm-auto"
-                    data-refresh-endpoint="/news"
+                    data-refresh-endpoint="{{ url_for('news.news') }}"
                     data-refresh-type="news"
                     aria-label="Refresh news headlines"
                   >
@@ -507,7 +538,8 @@
     <script>
       document.addEventListener("DOMContentLoaded", () => {
         const buttons = document.querySelectorAll("[data-refresh-endpoint]");
-        if (!buttons.length) return;
+        const refreshOrder = ["crypto", "weather", "news"];
+        const AUTO_REFRESH_INTERVAL_MS = 300000;
 
         const { Toast: BootstrapToast } = window.bootstrap || {};
         const toastEl = document.getElementById("refresh-toast");
@@ -515,7 +547,11 @@
         const toastMessageEl = document.getElementById("refresh-toast-message");
         const toastInstance =
           toastEl && BootstrapToast
-            ? BootstrapToast.getOrCreateInstance(toastEl, { animation: true, autohide: true, delay: 3000 })
+            ? BootstrapToast.getOrCreateInstance(toastEl, {
+                animation: true,
+                autohide: true,
+                delay: 3000,
+              })
             : null;
         const toastVariants = {
           crypto: { className: "toast-crypto", label: "Crypto" },
@@ -523,7 +559,9 @@
           news: { className: "toast-news", label: "News" },
           error: { className: "toast-error", label: "Refresh Failed" },
         };
-        const toastVariantClasses = Object.values(toastVariants).map((item) => item.className);
+        const toastVariantClasses = Object.values(toastVariants).map(
+          (item) => item.className
+        );
 
         const showRefreshToast = (variant, message) => {
           if (!toastInstance || !toastEl || !toastMessageEl) return;
@@ -570,10 +608,24 @@
             card.classList.remove(className);
           }, 900);
         };
+
+        const animateTimestamp = (element) => {
+          if (!element) return;
+          element.classList.remove("timestamp-flash");
+          void element.offsetWidth;
+          element.classList.add("timestamp-flash");
+        };
+
         const successMessages = {
           crypto: "Crypto data refreshed",
           weather: "Weather forecast updated",
           news: "News headlines refreshed",
+        };
+
+        const failureMessages = {
+          crypto: "Unable to refresh crypto right now.",
+          weather: "Unable to refresh weather right now.",
+          news: "Unable to refresh news right now.",
         };
 
         const formatCurrency = (value) =>
@@ -615,8 +667,10 @@
                 typeof eth === "number" ? formatCurrency(eth) : "N/A";
             }
             if (updatedEl) {
-              const timestamp = payload?.last_updated || new Date().toISOString();
+              const timestamp =
+                payload?.last_updated || new Date().toISOString();
               updatedEl.textContent = `Last updated ${formatTimestamp(timestamp)}`;
+              animateTimestamp(updatedEl);
             }
           },
           weather: (payload) => {
@@ -651,7 +705,9 @@
                 return text
                   .split(" ")
                   .map((word) =>
-                    word ? word[0].toUpperCase() + word.slice(1).toLowerCase() : ""
+                    word
+                      ? word[0].toUpperCase() + word.slice(1).toLowerCase()
+                      : ""
                   )
                   .join(" ");
               })();
@@ -674,8 +730,10 @@
             }
 
             if (updatedEl) {
-              const timestamp = payload?.last_updated || new Date().toISOString();
+              const timestamp =
+                payload?.last_updated || new Date().toISOString();
               updatedEl.textContent = `Last updated ${formatTimestamp(timestamp)}`;
+              animateTimestamp(updatedEl);
             }
           },
           news: (payload) => {
@@ -687,9 +745,13 @@
               : [];
 
             if (updatedEl) {
-              const timestamp = payload?.last_updated || new Date().toISOString();
+              const timestamp =
+                payload?.last_updated || new Date().toISOString();
               const suffix = headlines.length ? "" : " (no headlines available)";
-              updatedEl.textContent = `Last updated ${formatTimestamp(timestamp)}${suffix}`;
+              updatedEl.textContent = `Last updated ${formatTimestamp(
+                timestamp
+              )}${suffix}`;
+              animateTimestamp(updatedEl);
             }
 
             if (listEl) {
@@ -749,73 +811,148 @@
           },
         };
 
+        const refreshTargets = {};
+        const refreshLocks = {};
+
+        const handleRefreshFailure = (type) => {
+          const updatedElementId =
+            type === "crypto"
+              ? "crypto-last-updated"
+              : type === "weather"
+              ? "weather-last-updated"
+              : type === "news"
+              ? "news-last-updated"
+              : "";
+          if (updatedElementId) {
+            const updatedEl = document.getElementById(updatedElementId);
+            if (updatedEl) {
+              updatedEl.textContent =
+                "Last updated: unable to refresh at this time.";
+            }
+          }
+
+          if (type === "news") {
+            const listEl = document.getElementById("news-headlines");
+            const emptyStateEl = document.getElementById("news-empty-state");
+            if (listEl) {
+              listEl.classList.add("d-none");
+              listEl.innerHTML = "";
+            }
+            if (emptyStateEl) {
+              emptyStateEl.classList.remove("d-none");
+              emptyStateEl.textContent =
+                "Unable to load headlines right now. Please try again soon.";
+            }
+          }
+        };
+
+        const performRefresh = async (type, options = {}) => {
+          const target = refreshTargets[type];
+          if (!target || refreshLocks[type]) return;
+          const { button, endpoint, card } = target;
+          if (!endpoint) return;
+
+          refreshLocks[type] = true;
+          if (button) {
+            button.disabled = true;
+            button.classList.add("disabled");
+          }
+          setRefreshingState(card, true);
+
+          try {
+            const response = await fetch(endpoint, { cache: "no-store" });
+            if (!response.ok) {
+              throw new Error(`Request failed: ${response.status}`);
+            }
+            const payload = await response.json();
+            updaters[type](payload);
+            triggerCardFlash(card, "success");
+            if (!options.silentSuccess) {
+              const successMessage = successMessages[type] || "Refresh complete";
+              const variant = successMessages[type] ? type : "crypto";
+              showRefreshToast(variant, successMessage);
+            }
+          } catch (error) {
+            console.error(`Failed to refresh ${type} data:`, error);
+            handleRefreshFailure(type);
+            triggerCardFlash(card, "error");
+            if (!options.silentFailure) {
+              const failureMessage = failureMessages[type] || "Refresh failed.";
+              showRefreshToast("error", failureMessage);
+            }
+          } finally {
+            setRefreshingState(card, false);
+            if (button) {
+              button.disabled = false;
+              button.classList.remove("disabled");
+            }
+            refreshLocks[type] = false;
+          }
+        };
+
         buttons.forEach((button) => {
           const endpoint = button.dataset.refreshEndpoint;
           const type = button.dataset.refreshType;
           if (!endpoint || !type || !(type in updaters)) return;
+          const card = button.closest(".card-section");
 
-          button.addEventListener("click", async () => {
-            const card = button.closest(".card-section");
-            button.disabled = true;
-            button.classList.add("disabled");
-            setRefreshingState(card, true);
+          refreshTargets[type] = { button, endpoint, card };
 
-            try {
-              const response = await fetch(endpoint, { cache: "no-store" });
-              if (!response.ok) {
-                throw new Error(`Request failed: ${response.status}`);
-              }
-              const payload = await response.json();
-              updaters[type](payload);
-              triggerCardFlash(card, "success");
-              const successMessage = successMessages[type] || "Refresh complete";
-              showRefreshToast(type in successMessages ? type : "crypto", successMessage);
-            } catch (error) {
-              console.error(`Failed to refresh ${type} data:`, error);
-              const updatedElementId =
-                type === "crypto"
-                  ? "crypto-last-updated"
-                  : type === "weather"
-                  ? "weather-last-updated"
-                  : type === "news"
-                  ? "news-last-updated"
-                  : "";
-              if (updatedElementId) {
-                const updatedEl = document.getElementById(updatedElementId);
-                if (updatedEl) {
-                  updatedEl.textContent = "Last updated: unable to refresh at this time.";
-                }
-              }
-              if (type === "news") {
-                const listEl = document.getElementById("news-headlines");
-                const emptyStateEl = document.getElementById("news-empty-state");
-                if (listEl) {
-                  listEl.classList.add("d-none");
-                  listEl.innerHTML = "";
-                }
-                if (emptyStateEl) {
-                  emptyStateEl.classList.remove("d-none");
-                  emptyStateEl.textContent =
-                    "Unable to load headlines right now. Please try again soon.";
-                }
-              }
-              triggerCardFlash(card, "error");
-              const failureMessage =
-                type === "crypto"
-                  ? "Unable to refresh crypto right now."
-                  : type === "weather"
-                  ? "Unable to refresh weather right now."
-                  : type === "news"
-                  ? "Unable to refresh news right now."
-                  : "Refresh failed.";
-              showRefreshToast("error", failureMessage);
-            } finally {
-              setRefreshingState(card, false);
-              button.disabled = false;
-              button.classList.remove("disabled");
-            }
+          button.addEventListener("click", () => {
+            performRefresh(type, { source: "manual" });
           });
         });
+
+        const autoRefreshToggle = document.getElementById("auto-refresh-toggle");
+        let autoRefreshIntervalId = null;
+        let autoRefreshCycleInFlight = false;
+
+        const stopAutoRefresh = () => {
+          if (autoRefreshIntervalId) {
+            window.clearInterval(autoRefreshIntervalId);
+            autoRefreshIntervalId = null;
+          }
+        };
+
+        const autoRefreshCycle = async () => {
+          if (autoRefreshCycleInFlight) return;
+          autoRefreshCycleInFlight = true;
+          try {
+            for (const type of refreshOrder) {
+              if (!refreshTargets[type]) continue;
+              await performRefresh(type, { source: "auto" });
+            }
+          } finally {
+            autoRefreshCycleInFlight = false;
+          }
+        };
+
+        const startAutoRefresh = () => {
+          stopAutoRefresh();
+          if (!refreshOrder.some((type) => refreshTargets[type])) {
+            return;
+          }
+          autoRefreshCycle();
+          autoRefreshIntervalId = window.setInterval(
+            autoRefreshCycle,
+            AUTO_REFRESH_INTERVAL_MS
+          );
+        };
+
+        if (autoRefreshToggle) {
+          autoRefreshToggle.addEventListener("change", (event) => {
+            const enabled = event.target.checked;
+            if (enabled) {
+              startAutoRefresh();
+            } else {
+              stopAutoRefresh();
+            }
+          });
+
+          if (autoRefreshToggle.checked) {
+            startAutoRefresh();
+          }
+        }
       });
     </script>
   </body>
