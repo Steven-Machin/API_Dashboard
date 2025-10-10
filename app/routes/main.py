@@ -25,3 +25,17 @@ def index():
         news_headlines=news_headlines,
         news_last_updated=current_timestamp,
     )
+
+
+@main_bp.route("/settings")
+def settings():
+    return render_template(
+        "settings.html",
+        settings={
+            "show_crypto": True,
+            "show_weather": True,
+            "show_news": True,
+            "default_city": "Chicago",
+            "auto_refresh_minutes": 5,
+        },
+    )

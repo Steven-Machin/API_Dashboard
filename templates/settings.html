@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Settings · API Dashboard</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+      integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1G8qonJ8aFOBvawt1yXQXg6"
+      crossorigin="anonymous"
+    >
+    <style>
+      body {
+        background: #f1f5f9;
+      }
+
+      .page-header {
+        border-bottom: 1px solid rgba(148, 163, 184, 0.3);
+      }
+
+      .card-settings {
+        border-radius: 1rem;
+        box-shadow: 0 14px 45px -18px rgba(15, 23, 42, 0.45);
+      }
+    </style>
+  </head>
+  <body class="d-flex flex-column min-vh-100">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
+      <div class="container py-2">
+        <a class="navbar-brand fw-semibold" href="{{ url_for('main.index') }}">
+          API Dashboard
+        </a>
+        <div class="ms-auto">
+          <a
+            href="{{ url_for('main.index') }}"
+            class="btn btn-sm btn-outline-light"
+          >
+            Back to Dashboard
+          </a>
+        </div>
+      </div>
+    </nav>
+
+    <main class="container flex-grow-1 py-5">
+      <header class="page-header mb-4">
+        <h1 class="h3 fw-bold text-dark mb-1">Dashboard Settings</h1>
+        <p class="text-muted mb-0">
+          Configure which data cards to display and default refresh preferences.
+        </p>
+      </header>
+
+      <div class="row justify-content-center">
+        <div class="col-12 col-lg-8">
+          <div class="card card-settings border-0">
+            <div class="card-body p-4 p-lg-5">
+              <form>
+                <section class="mb-4">
+                  <h2 class="h5 text-dark fw-semibold mb-3">Visibility</h2>
+                  <div class="form-check form-switch mb-3">
+                    <input
+                      class="form-check-input"
+                      type="checkbox"
+                      role="switch"
+                      id="toggle-crypto"
+                      {% if (settings or {}).get('show_crypto', True) %}checked{% endif %}
+                    >
+                    <label class="form-check-label" for="toggle-crypto">
+                      Show Crypto
+                    </label>
+                  </div>
+                  <div class="form-check form-switch mb-3">
+                    <input
+                      class="form-check-input"
+                      type="checkbox"
+                      role="switch"
+                      id="toggle-weather"
+                      {% if (settings or {}).get('show_weather', True) %}checked{% endif %}
+                    >
+                    <label class="form-check-label" for="toggle-weather">
+                      Show Weather
+                    </label>
+                  </div>
+                  <div class="form-check form-switch">
+                    <input
+                      class="form-check-input"
+                      type="checkbox"
+                      role="switch"
+                      id="toggle-news"
+                      {% if (settings or {}).get('show_news', True) %}checked{% endif %}
+                    >
+                    <label class="form-check-label" for="toggle-news">
+                      Show News
+                    </label>
+                  </div>
+                </section>
+
+                <section class="mb-4">
+                  <h2 class="h5 text-dark fw-semibold mb-3">Preferences</h2>
+                  <div class="mb-3">
+                    <label class="form-label" for="default-city">
+                      Default City
+                    </label>
+                    <input
+                      type="text"
+                      class="form-control"
+                      id="default-city"
+                      placeholder="Enter city name"
+                      value="{{ (settings or {}).get('default_city', '') }}"
+                    >
+                    <div class="form-text">
+                      Used for weather forecasts when no city is provided.
+                    </div>
+                  </div>
+                  <div class="mb-3">
+                    <label class="form-label" for="auto-refresh-interval">
+                      Auto-refresh Interval (minutes)
+                    </label>
+                    <input
+                      type="number"
+                      class="form-control"
+                      id="auto-refresh-interval"
+                      min="1"
+                      step="1"
+                      placeholder="5"
+                      value="{{ (settings or {}).get('auto_refresh_minutes', 5) }}"
+                    >
+                    <div class="form-text">
+                      Applies when auto-refresh is enabled on the dashboard.
+                    </div>
+                  </div>
+                </section>
+
+                <div class="d-flex justify-content-end">
+                  <button type="button" class="btn btn-primary px-4">
+                    Save Settings
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <footer class="bg-dark text-white-50 py-3">
+      <div class="container text-center small">
+        &copy; API Dashboard &middot; Settings
+      </div>
+    </footer>
+
+    <script
+      src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"
+      integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL"
+      crossorigin="anonymous"
+    ></script>
+  </body>
+</html>
