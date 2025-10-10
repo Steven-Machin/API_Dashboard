@@ -25,12 +25,64 @@
       }
 
       .card-section {
-        border: 0;
+        border: 1px solid transparent;
         border-radius: 1rem;
         box-shadow: 0 12px 30px -12px rgba(15, 23, 42, 0.35);
         color: #0f172a;
         min-height: 100%;
         overflow: hidden;
+        position: relative;
+        transition: box-shadow 0.35s ease, border-color 0.35s ease;
+      }
+
+      .card-refresh-overlay {
+        position: absolute;
+        inset: 0;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.5s ease;
+        z-index: 5;
+      }
+
+      .card-section.is-refreshing .card-refresh-overlay {
+        opacity: 1;
+        pointer-events: all;
+      }
+
+      .card-section.flash-success {
+        border-color: rgba(34, 197, 94, 0.75);
+        box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.45);
+        animation: card-glow-success 0.8s ease;
+      }
+
+      .card-section.flash-error {
+        border-color: rgba(239, 68, 68, 0.8);
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.45);
+        animation: card-glow-error 0.8s ease;
+      }
+
+      @keyframes card-glow-success {
+        0% {
+          box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
+        }
+        40% {
+          box-shadow: 0 0 18px 6px rgba(34, 197, 94, 0.4);
+        }
+        100% {
+          box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
+        }
+      }
+
+      @keyframes card-glow-error {
+        0% {
+          box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+        }
+        40% {
+          box-shadow: 0 0 18px 6px rgba(239, 68, 68, 0.35);
+        }
+        100% {
+          box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+        }
       }
 
       .card-section[data-theme="crypto"] .card-header {
@@ -154,6 +206,12 @@
       <div class="row g-4 justify-content-center">
         <div class="col-12 col-md-6 col-lg-4">
           <div class="card card-section h-100" data-theme="crypto">
+            <div
+              class="card-refresh-overlay fade d-flex align-items-center justify-content-center bg-white bg-opacity-75"
+            >
+              <div class="spinner-border text-primary" role="status" aria-hidden="true"></div>
+              <span class="visually-hidden">Refreshing</span>
+            </div>
             <div class="card-header d-flex align-items-center">
               <span class="card-icon">
                 <i class="fa-solid fa-coins"></i>
@@ -217,6 +275,12 @@
 
         <div class="col-12 col-md-6 col-lg-4">
           <div class="card card-section h-100" data-theme="weather">
+            <div
+              class="card-refresh-overlay fade d-flex align-items-center justify-content-center bg-white bg-opacity-75"
+            >
+              <div class="spinner-border text-primary" role="status" aria-hidden="true"></div>
+              <span class="visually-hidden">Refreshing</span>
+            </div>
             <div class="card-header d-flex align-items-center">
               <span class="card-icon">
                 <i class="fa-solid fa-cloud-sun"></i>
@@ -294,14 +358,20 @@
         </div>
 
         <div class="col-12 col-md-6 col-lg-4">
-            <div class="card card-section h-100" data-theme="news">
-              <div class="card-header d-flex align-items-center">
-                <span class="card-icon">
-                  <i class="fa-solid fa-newspaper"></i>
-                </span>
-                <h5 class="card-title mb-0">News Headlines</h5>
-              </div>
-              <div class="card-body">
+          <div class="card card-section h-100" data-theme="news">
+            <div
+              class="card-refresh-overlay fade d-flex align-items-center justify-content-center bg-white bg-opacity-75"
+            >
+              <div class="spinner-border text-primary" role="status" aria-hidden="true"></div>
+              <span class="visually-hidden">Refreshing</span>
+            </div>
+            <div class="card-header d-flex align-items-center">
+              <span class="card-icon">
+                <i class="fa-solid fa-newspaper"></i>
+              </span>
+              <h5 class="card-title mb-0">News Headlines</h5>
+            </div>
+            <div class="card-body">
                 {% set news_items = (news_headlines or []) %}
                 {% set formatted_news_updated = news_last_updated.strftime('%Y-%m-%d %H:%M:%S UTC') if news_last_updated else None %}
                 <div class="d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-2 mb-3">
@@ -354,11 +424,32 @@
                 >
                   No headlines available right now. Try refreshing in a moment.
                 </p>
-              </div>
             </div>
+          </div>
         </div>
       </div>
     </main>
+
+    <div class="position-fixed top-0 end-0 p-3" style="z-index: 1200">
+      <div
+        id="refresh-toast"
+        class="toast align-items-center text-bg-danger border-0 fade"
+        role="status"
+        aria-live="assertive"
+        aria-atomic="true"
+        data-bs-delay="2200"
+      >
+        <div class="d-flex">
+          <div id="refresh-toast-message" class="toast-body">Failed to load</div>
+          <button
+            type="button"
+            class="btn-close btn-close-white me-2 m-auto"
+            data-bs-dismiss="toast"
+            aria-label="Close"
+          ></button>
+        </div>
+      </div>
+    </div>
 
     <footer class="bg-dark text-white-50 py-3">
       <div class="container text-center small">
@@ -376,6 +467,43 @@
         const buttons = document.querySelectorAll("[data-refresh-endpoint]");
         if (!buttons.length) return;
 
+        const { Toast: BootstrapToast } = window.bootstrap || {};
+        const toastEl = document.getElementById("refresh-toast");
+        const toastMessageEl = document.getElementById("refresh-toast-message");
+        const failureToast =
+          toastEl && BootstrapToast
+            ? BootstrapToast.getOrCreateInstance(toastEl, { delay: 2200 })
+            : null;
+
+        const showFailureToast = (message = "Failed to load") => {
+          if (toastMessageEl) {
+            toastMessageEl.textContent = message;
+          }
+          if (failureToast) {
+            failureToast.show();
+          }
+        };
+
+        const setRefreshingState = (card, isRefreshing) => {
+          if (!card) return;
+          card.classList.toggle("is-refreshing", isRefreshing);
+          const overlay = card.querySelector(".card-refresh-overlay");
+          if (overlay) {
+            overlay.classList.toggle("show", isRefreshing);
+          }
+        };
+
+        const triggerCardFlash = (card, variant) => {
+          if (!card) return;
+          const className = variant === "success" ? "flash-success" : "flash-error";
+          card.classList.remove("flash-success", "flash-error");
+          void card.offsetWidth;
+          card.classList.add(className);
+          window.setTimeout(() => {
+            card.classList.remove(className);
+          }, 900);
+        };
+
         const formatCurrency = (value) =>
           new Intl.NumberFormat("en-US", {
             style: "currency",
@@ -385,6 +513,7 @@
 
         const formatTimestamp = (value) => {
           const date = value ? new Date(value) : new Date();
+          const safeDate = Number.isNaN(date.getTime()) ? new Date() : date;
           return new Intl.DateTimeFormat("en-US", {
             year: "numeric",
             month: "2-digit",
@@ -394,7 +523,7 @@
             second: "2-digit",
             hour12: false,
             timeZoneName: "short",
-          }).format(date);
+          }).format(safeDate);
         };
 
         const updaters = {
@@ -414,9 +543,8 @@
                 typeof eth === "number" ? formatCurrency(eth) : "N/A";
             }
             if (updatedEl) {
-              updatedEl.textContent = `Last updated ${formatTimestamp(
-                payload?.last_updated
-              )}`;
+              const timestamp = payload?.last_updated || new Date().toISOString();
+              updatedEl.textContent = `Last updated ${formatTimestamp(timestamp)}`;
             }
           },
           weather: (payload) => {
@@ -474,9 +602,8 @@
             }
 
             if (updatedEl) {
-              updatedEl.textContent = `Last updated ${formatTimestamp(
-                payload?.last_updated
-              )}`;
+              const timestamp = payload?.last_updated || new Date().toISOString();
+              updatedEl.textContent = `Last updated ${formatTimestamp(timestamp)}`;
             }
           },
           news: (payload) => {
@@ -488,10 +615,9 @@
               : [];
 
             if (updatedEl) {
-              const timestamp = payload?.last_updated;
-              updatedEl.textContent = headlines.length
-                ? `Last updated ${formatTimestamp(timestamp)}`
-                : "Last updated: no fresh headlines.";
+              const timestamp = payload?.last_updated || new Date().toISOString();
+              const suffix = headlines.length ? "" : " (no headlines available)";
+              updatedEl.textContent = `Last updated ${formatTimestamp(timestamp)}${suffix}`;
             }
 
             if (listEl) {
@@ -557,8 +683,10 @@
           if (!endpoint || !type || !(type in updaters)) return;
 
           button.addEventListener("click", async () => {
+            const card = button.closest(".card-section");
             button.disabled = true;
             button.classList.add("disabled");
+            setRefreshingState(card, true);
 
             try {
               const response = await fetch(endpoint, { cache: "no-store" });
@@ -567,42 +695,44 @@
               }
               const payload = await response.json();
               updaters[type](payload);
-              } catch (error) {
-                console.error(`Failed to refresh ${type} data:`, error);
-                const updatedElementId =
-                  type === "crypto"
-                    ? "crypto-last-updated"
-                    : type === "weather"
-                    ? "weather-last-updated"
-                    : type === "news"
-                    ? "news-last-updated"
-                    : "";
-                if (updatedElementId) {
-                  const updatedEl = document.getElementById(updatedElementId);
-                  if (updatedEl) {
-                    updatedEl.textContent =
-                      "Last updated: unable to refresh at this time.";
-                  }
+              triggerCardFlash(card, "success");
+            } catch (error) {
+              console.error(`Failed to refresh ${type} data:`, error);
+              const updatedElementId =
+                type === "crypto"
+                  ? "crypto-last-updated"
+                  : type === "weather"
+                  ? "weather-last-updated"
+                  : type === "news"
+                  ? "news-last-updated"
+                  : "";
+              if (updatedElementId) {
+                const updatedEl = document.getElementById(updatedElementId);
+                if (updatedEl) {
+                  updatedEl.textContent = "Last updated: unable to refresh at this time.";
                 }
-                if (type === "news") {
-                  const listEl = document.getElementById("news-headlines");
-                  const emptyStateEl =
-                    document.getElementById("news-empty-state");
-                  if (listEl) {
-                    listEl.classList.add("d-none");
-                    listEl.innerHTML = "";
-                  }
-                  if (emptyStateEl) {
-                    emptyStateEl.classList.remove("d-none");
-                    emptyStateEl.textContent =
-                      "Unable to load headlines right now. Please try again soon.";
-                  }
-                }
-              } finally {
-                button.disabled = false;
-                button.classList.remove("disabled");
               }
-            });
+              if (type === "news") {
+                const listEl = document.getElementById("news-headlines");
+                const emptyStateEl = document.getElementById("news-empty-state");
+                if (listEl) {
+                  listEl.classList.add("d-none");
+                  listEl.innerHTML = "";
+                }
+                if (emptyStateEl) {
+                  emptyStateEl.classList.remove("d-none");
+                  emptyStateEl.textContent =
+                    "Unable to load headlines right now. Please try again soon.";
+                }
+              }
+              triggerCardFlash(card, "error");
+              showFailureToast();
+            } finally {
+              setRefreshingState(card, false);
+              button.disabled = false;
+              button.classList.remove("disabled");
+            }
+          });
         });
       });
     </script>
