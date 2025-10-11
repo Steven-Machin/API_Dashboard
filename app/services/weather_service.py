@@ -10,23 +10,26 @@ OPEN_WEATHER_URL = "https://api.openweathermap.org/data/2.5/weather"
 DEFAULT_CITY = "Chicago"
 DEFAULT_UNITS = "imperial"
 
-_WEATHER_FALLBACK: Dict[str, Any] = {
-    "name": DEFAULT_CITY,
-    "main": {
-        "temp": 72.0,
-        "humidity": 55,
-    },
-    "weather": [
-        {"main": "Clear", "description": "clear skies"},
-    ],
-    "wind": {"speed": 5.0},
-}
+
+def _build_fallback(city: str) -> Dict[str, Any]:
+    return {
+        "name": city,
+        "main": {
+            "temp": 72.0,
+            "humidity": 55,
+        },
+        "weather": [
+            {"main": "Clear", "description": "clear skies"},
+        ],
+        "wind": {"speed": 5.0},
+    }
 
 
-def get_weather_forecast() -> Dict[str, Any]:
+def get_weather_forecast(city: str | None = None) -> Dict[str, Any]:
     """Fetch weather data from OpenWeatherMap or return fallback values."""
+    target_city = (city or DEFAULT_CITY).strip() or DEFAULT_CITY
     api_key = os.environ.get("OPENWEATHER_API_KEY")
-    params = {"q": DEFAULT_CITY, "units": DEFAULT_UNITS}
+    params = {"q": target_city, "units": DEFAULT_UNITS}
 
     if api_key:
         params["appid"] = api_key
@@ -40,4 +43,4 @@ def get_weather_forecast() -> Dict[str, Any]:
             # Swallow API errors to ensure the dashboard remains functional.
             pass
 
-    return _WEATHER_FALLBACK.copy()
+    return _build_fallback(target_city)

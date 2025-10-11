@@ -1,15 +1,19 @@
 from datetime import datetime, timezone
 
 from flask import Blueprint, jsonify
+from flask_login import login_required
 
+from app.services.settings_service import get_user_settings
 from app.services.weather_service import get_weather_forecast
 
 weather_bp = Blueprint("weather", __name__)
 
 
 @weather_bp.route("/weather")
+@login_required
 def weather():
-    data = get_weather_forecast()
+    settings = get_user_settings()
+    data = get_weather_forecast(settings.default_city)
     main = data.get("main", {}) if isinstance(data, dict) else {}
     wind = data.get("wind", {}) if isinstance(data, dict) else {}
     weather_list = data.get("weather") if isinstance(data, dict) else []
