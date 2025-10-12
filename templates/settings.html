@@ -82,7 +82,7 @@
                 {% endif %}
               {% endwith %}
 
-              <form method="post" action="{{ url_for('main.settings') }}">
+              <form id="settings-form" method="post" action="{{ url_for('main.settings') }}">
                 <section class="mb-4">
                   <h2 class="h5 text-dark fw-semibold mb-3">Visibility</h2>
                   <div class="form-check form-switch mb-3">
@@ -93,6 +93,7 @@
                       id="toggle-crypto"
                       name="show_crypto"
                       value="1"
+                      data-setting-toggle="show_crypto"
                       {% if settings.show_crypto %}checked{% endif %}
                     >
                     <label class="form-check-label" for="toggle-crypto">
@@ -107,6 +108,7 @@
                       id="toggle-weather"
                       name="show_weather"
                       value="1"
+                      data-setting-toggle="show_weather"
                       {% if settings.show_weather %}checked{% endif %}
                     >
                     <label class="form-check-label" for="toggle-weather">
@@ -121,6 +123,7 @@
                       id="toggle-news"
                       name="show_news"
                       value="1"
+                      data-setting-toggle="show_news"
                       {% if settings.show_news %}checked{% endif %}
                     >
                     <label class="form-check-label" for="toggle-news">
@@ -141,6 +144,7 @@
                       id="default-city"
                       name="default_city"
                       placeholder="Enter city name"
+                      data-setting-input="default_city"
                       value="{{ settings.default_city }}"
                     >
                     <div class="form-text">
@@ -159,6 +163,7 @@
                       step="1"
                       placeholder="5"
                       name="auto_refresh_interval"
+                      data-setting-input="refresh_interval"
                       value="{{ settings.refresh_interval }}"
                     >
                     <div class="form-text">
@@ -179,6 +184,22 @@
       </div>
     </main>
 
+    <div class="position-fixed top-0 end-0 p-3" style="z-index: 1200">
+      <div
+        id="settings-toast"
+        class="toast text-bg-primary border-0 shadow-sm fade"
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        data-bs-delay="2200"
+      >
+        <div class="toast-body d-flex align-items-center gap-2">
+          <i class="fa-solid fa-circle-check"></i>
+          <span id="settings-toast-message">Settings updated</span>
+        </div>
+      </div>
+    </div>
+
     <footer class="bg-dark text-white-50 py-3">
       <div class="container text-center small">
         &copy; API Dashboard &middot; Settings
@@ -190,6 +211,167 @@
       integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL"
       crossorigin="anonymous"
     ></script>
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        const form = document.getElementById("settings-form");
+        if (!form) return;
+
+        const toggleFields = form.querySelectorAll("[data-setting-toggle]");
+        const toggleMap = {};
+        toggleFields.forEach((input) => {
+          const key = input.dataset.settingToggle;
+          if (key) {
+            toggleMap[key] = input;
+          }
+        });
+        const cityInput = form.querySelector('[data-setting-input="default_city"]');
+        const refreshInput = form.querySelector('[data-setting-input="refresh_interval"]');
+
+        const { Toast: BootstrapToast } = window.bootstrap || {};
+        const toastEl = document.getElementById("settings-toast");
+        const toastMessageEl = document.getElementById("settings-toast-message");
+        const toastInstance =
+          toastEl && BootstrapToast
+            ? BootstrapToast.getOrCreateInstance(toastEl, { autohide: true, delay: 2200 })
+            : null;
+
+        const showSettingsToast = (message = "Settings updated") => {
+          if (!toastInstance || !toastEl) return;
+          if (toastMessageEl) {
+            toastMessageEl.textContent = message;
+          }
+          toastInstance.show();
+        };
+
+        const SETTINGS_CHANNEL_NAME = "dashboard-settings";
+        const STORAGE_SYNC_KEY = "dashboard-settings-sync";
+        const settingsChannel =
+          "BroadcastChannel" in window ? new BroadcastChannel(SETTINGS_CHANNEL_NAME) : null;
+
+        const sanitizePatch = (patch = {}) =>
+          Object.fromEntries(
+            Object.entries(patch || {}).filter(([, value]) => value !== undefined)
+          );
+
+        const broadcastSettings = (settings, metadata = {}) => {
+          if (!settings || typeof settings !== "object") return;
+          const payload = { type: "settings:update", settings, ...metadata };
+          if (settingsChannel) {
+            settingsChannel.postMessage(payload);
+          }
+          try {
+            localStorage.setItem(
+              STORAGE_SYNC_KEY,
+              JSON.stringify({ settings, meta: metadata, ts: Date.now() })
+            );
+            window.setTimeout(() => {
+              try {
+                localStorage.removeItem(STORAGE_SYNC_KEY);
+              } catch {
+                /* ignore */
+              }
+            }, 50);
+          } catch (error) {
+            console.warn("Unable to sync settings via storage", error);
+          }
+        };
+
+        const updateSettings = async (patch, { silentToast = false } = {}) => {
+          const body = sanitizePatch(patch);
+          if (!Object.keys(body).length) return null;
+          try {
+            const response = await fetch("{{ url_for('main.update_settings_api') }}", {
+              method: "PATCH",
+              headers: {
+                "Content-Type": "application/json",
+                "X-Requested-With": "XMLHttpRequest",
+              },
+              body: JSON.stringify(body),
+            });
+
+            if (!response.ok) {
+              console.error("Failed to update settings:", response.status);
+              return null;
+            }
+
+            const data = await response.json();
+            if (data?.settings) {
+              broadcastSettings(data.settings || {});
+              if (!silentToast) {
+                showSettingsToast();
+              }
+              return data.settings;
+            }
+          } catch (error) {
+            console.error("Unable to update settings", error);
+          }
+          return null;
+        };
+
+        toggleFields.forEach((input) => {
+          input.addEventListener("change", () => {
+            const field = input.dataset.settingToggle;
+            if (!field) return;
+            const patch = sanitizePatch({ [field]: input.checked });
+            if (!Object.keys(patch).length) return;
+            broadcastSettings(patch, { optimistic: true });
+            updateSettings(patch);
+          });
+        });
+
+        let cityDebounceId = null;
+        if (cityInput) {
+          const pushCityUpdate = () => {
+            const patch = sanitizePatch({
+              default_city: (cityInput.value || "").trim(),
+            });
+            if (!Object.keys(patch).length) return;
+            broadcastSettings(patch, { optimistic: true });
+            updateSettings(patch);
+          };
+          cityInput.addEventListener("input", () => {
+            window.clearTimeout(cityDebounceId);
+            cityDebounceId = window.setTimeout(pushCityUpdate, 400);
+          });
+          cityInput.addEventListener("blur", () => {
+            window.clearTimeout(cityDebounceId);
+            pushCityUpdate();
+          });
+        }
+
+        if (refreshInput) {
+          refreshInput.addEventListener("change", () => {
+            const rawValue = Number.parseInt(refreshInput.value, 10);
+            if (!Number.isFinite(rawValue)) return;
+            const patch = sanitizePatch({ refresh_interval: rawValue });
+            if (!Object.keys(patch).length) return;
+            broadcastSettings(patch, { optimistic: true });
+            updateSettings(patch);
+          });
+        }
+
+        form.addEventListener("submit", (event) => {
+          event.preventDefault();
+          const intervalValue = Number.parseInt(refreshInput?.value ?? "5", 10);
+          const payload = sanitizePatch({
+            show_crypto: toggleMap.show_crypto?.checked,
+            show_weather: toggleMap.show_weather?.checked,
+            show_news: toggleMap.show_news?.checked,
+            default_city: cityInput?.value?.trim(),
+            refresh_interval: Number.isFinite(intervalValue) ? intervalValue : undefined,
+          });
+          if (!Object.keys(payload).length) return;
+          broadcastSettings(payload, { optimistic: true });
+          updateSettings(payload);
+        });
+      });
+    </script>
   </body>
 </html>
+
+
+
+
+
+
 

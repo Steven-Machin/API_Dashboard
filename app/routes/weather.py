@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from flask import Blueprint, jsonify
+from flask import Blueprint, jsonify, request
 from flask_login import login_required
 
 from app.services.settings_service import get_user_settings
@@ -13,7 +13,9 @@ weather_bp = Blueprint("weather", __name__)
 @login_required
 def weather():
     settings = get_user_settings()
-    data = get_weather_forecast(settings.default_city)
+    requested_city = (request.args.get("city") or "").strip()
+    target_city = requested_city or settings.default_city
+    data = get_weather_forecast(target_city)
     main = data.get("main", {}) if isinstance(data, dict) else {}
     wind = data.get("wind", {}) if isinstance(data, dict) else {}
     weather_list = data.get("weather") if isinstance(data, dict) else []

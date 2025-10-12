@@ -50,3 +50,12 @@ class UserSettings(db.Model):
 
     def __repr__(self) -> str:
         return f"<UserSettings user_id={self.user_id} refresh_interval={self.refresh_interval}>"
+
+    def to_dict(self) -> dict:
+        return {
+            "show_crypto": self.show_crypto,
+            "show_weather": self.show_weather,
+            "show_news": self.show_news,
+            "default_city": self.default_city,
+            "refresh_interval": self.refresh_interval,
+        }

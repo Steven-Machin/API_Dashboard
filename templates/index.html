@@ -250,6 +250,10 @@
   <body
     class="bg-light d-flex flex-column min-vh-100"
     data-auto-refresh-interval="{{ auto_refresh_minutes }}"
+    data-default-city="{{ default_city }}"
+    data-show-crypto="{{ 'true' if show_crypto else 'false' }}"
+    data-show-weather="{{ 'true' if show_weather else 'false' }}"
+    data-show-news="{{ 'true' if show_news else 'false' }}"
   >
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
       <div class="container py-2 d-flex align-items-center gap-3">
@@ -309,8 +313,10 @@
         {% endif %}
       {% endwith %}
       <div class="row g-4 justify-content-center">
-        {% if show_crypto %}
-        <div class="col-12 col-md-6 col-lg-4">
+        <div
+          class="col-12 col-md-6 col-lg-4 {% if not show_crypto %}d-none{% endif %}"
+          data-card="crypto"
+        >
           <div class="card card-section h-100" data-theme="crypto">
             <div
               class="card-refresh-overlay fade d-flex align-items-center justify-content-center bg-white bg-opacity-75"
@@ -378,10 +384,11 @@
             </div>
           </div>
         </div>
-        {% endif %}
 
-        {% if show_weather %}
-        <div class="col-12 col-md-6 col-lg-4">
+        <div
+          class="col-12 col-md-6 col-lg-4 {% if not show_weather %}d-none{% endif %}"
+          data-card="weather"
+        >
           <div class="card card-section h-100" data-theme="weather">
             <div
               class="card-refresh-overlay fade d-flex align-items-center justify-content-center bg-white bg-opacity-75"
@@ -466,10 +473,11 @@
             </div>
           </div>
         </div>
-        {% endif %}
 
-        {% if show_news %}
-        <div class="col-12 col-md-6 col-lg-4">
+        <div
+          class="col-12 col-md-6 col-lg-4 {% if not show_news %}d-none{% endif %}"
+          data-card="news"
+        >
           <div class="card card-section h-100" data-theme="news">
             <div
               class="card-refresh-overlay fade d-flex align-items-center justify-content-center bg-white bg-opacity-75"
@@ -539,17 +547,21 @@
             </div>
           </div>
         </div>
-        {% endif %}
 
-        {% if not (show_crypto or show_weather or show_news) %}
-        <div class="col-12">
+        <div
+          class="col-12 {% if show_crypto or show_weather or show_news %}d-none{% endif %}"
+          id="cards-empty-state"
+        >
           <div class="alert alert-info text-center" role="alert">
             You have hidden all dashboard cards. Update your <a href="{{ url_for('main.settings') }}" class="alert-link">settings</a> to select the data you want to see.
           </div>
         </div>
-        {% endif %}
       </div>
     </main>
+
+    <script id="dashboard-settings-data" type="application/json">
+      {{ settings_payload | tojson }}
+    </script>
 
     <div class="position-fixed top-0 end-0 p-3" style="z-index: 1200">
       <div
@@ -589,10 +601,47 @@
     <script>
       document.addEventListener("DOMContentLoaded", () => {
         const rootEl = document.body;
-        const autoRefreshIntervalMinutes = Number(rootEl?.dataset?.autoRefreshInterval || "5");
-        const AUTO_REFRESH_INTERVAL_MS = Math.max(autoRefreshIntervalMinutes || 5, 1) * 60 * 1000;
+        const settingsDataEl = document.getElementById("dashboard-settings-data");
+        let parsedSettings = {};
+        if (settingsDataEl) {
+          try {
+            parsedSettings = JSON.parse(settingsDataEl.textContent || "{}") || {};
+          } catch (error) {
+            console.warn("Unable to parse settings payload", error);
+          }
+        }
+
+        let currentSettings = {
+          show_crypto: rootEl?.dataset?.showCrypto === "true",
+          show_weather: rootEl?.dataset?.showWeather === "true",
+          show_news: rootEl?.dataset?.showNews === "true",
+          default_city:
+            rootEl?.dataset?.defaultCity || parsedSettings.default_city || "Chicago",
+          refresh_interval: Number.parseInt(
+            rootEl?.dataset?.autoRefreshInterval ??
+              parsedSettings.refresh_interval ??
+              "5",
+            10
+          ),
+        }
+
+        if (
+          !Number.isFinite(currentSettings.refresh_interval) ||
+          currentSettings.refresh_interval < 1
+        ) {
+          currentSettings.refresh_interval = 5;
+        }
+
+        let autoRefreshIntervalMs = currentSettings.refresh_interval * 60 * 1000;
+        let lastSettingsSyncSignature = JSON.stringify({ settings: currentSettings, optimistic: false });
         const buttons = document.querySelectorAll("[data-refresh-endpoint]");
         const refreshOrder = ["crypto", "weather", "news"];
+        const cardContainers = {
+          crypto: document.querySelector('[data-card="crypto"]'),
+          weather: document.querySelector('[data-card="weather"]'),
+          news: document.querySelector('[data-card="news"]'),
+        }
+        const emptyStateEl = document.getElementById("cards-empty-state");
 
         const { Toast: BootstrapToast } = window.bootstrap || {};
         const toastEl = document.getElementById("refresh-toast");
@@ -611,7 +660,7 @@
           weather: { className: "toast-weather", label: "Weather" },
           news: { className: "toast-news", label: "News" },
           error: { className: "toast-error", label: "Refresh Failed" },
-        };
+        }
         const toastVariantClasses = Object.values(toastVariants).map(
           (item) => item.className
         );
@@ -640,7 +689,31 @@
           } else {
             toastInstance.show();
           }
-        };
+        }
+
+        const updateCardVisibility = (settingsState) => {
+          let anyVisible = false;
+          refreshOrder.forEach((type) => {
+            const card = cardContainers[type];
+            if (!card) return;
+            const shouldShow = Boolean(settingsState[`show_${type}`]);
+            card.classList.toggle("d-none", !shouldShow);
+            card.setAttribute("aria-hidden", shouldShow ? "false" : "true");
+            const refreshButton = card.querySelector(".btn-refresh");
+            if (refreshButton) {
+              refreshButton.disabled = !shouldShow;
+            }
+            if (shouldShow) {
+              anyVisible = true;
+            }
+          });
+
+          if (emptyStateEl) {
+            emptyStateEl.classList.toggle("d-none", anyVisible);
+          }
+        }
+
+        updateCardVisibility(currentSettings);
 
         const setRefreshingState = (card, isRefreshing) => {
           if (!card) return;
@@ -649,7 +722,7 @@
           if (overlay) {
             overlay.classList.toggle("show", isRefreshing);
           }
-        };
+        }
 
         const triggerCardFlash = (card, variant) => {
           if (!card) return;
@@ -660,26 +733,33 @@
           window.setTimeout(() => {
             card.classList.remove(className);
           }, 900);
-        };
+        }
 
         const animateTimestamp = (element) => {
           if (!element) return;
           element.classList.remove("timestamp-flash");
           void element.offsetWidth;
           element.classList.add("timestamp-flash");
-        };
+        }
 
         const successMessages = {
           crypto: "Crypto data refreshed",
           weather: "Weather forecast updated",
           news: "News headlines refreshed",
-        };
+        }
 
         const failureMessages = {
           crypto: "Unable to refresh crypto right now.",
           weather: "Unable to refresh weather right now.",
           news: "Unable to refresh news right now.",
-        };
+        }
+
+        const STORAGE_SYNC_KEY = "dashboard-settings-sync";
+        const SETTINGS_CHANNEL_NAME = "dashboard-settings";
+        const settingsChannel =
+          "BroadcastChannel" in window
+            ? new BroadcastChannel(SETTINGS_CHANNEL_NAME)
+            : null;
 
         const formatCurrency = (value) =>
           new Intl.NumberFormat("en-US", {
@@ -701,7 +781,7 @@
             hour12: false,
             timeZoneName: "short",
           }).format(safeDate);
-        };
+        }
 
         const updaters = {
           crypto: (payload) => {
@@ -862,7 +942,7 @@
               }
             }
           },
-        };
+        }
 
         const refreshTargets = {};
         const refreshLocks = {};
@@ -897,12 +977,12 @@
                 "Unable to load headlines right now. Please try again soon.";
             }
           }
-        };
+        }
 
-        const performRefresh = async (type, options = {}) => {
+        async function performRefresh(type, options = {}) {
           const target = refreshTargets[type];
           if (!target || refreshLocks[type]) return;
-          const { button, endpoint, card } = target;
+          const { button, endpoint, card, column } = target;
           if (!endpoint) return;
 
           refreshLocks[type] = true;
@@ -918,8 +998,7 @@
               throw new Error(`Request failed: ${response.status}`);
             }
             const payload = await response.json();
-            updaters[type](payload);
-            triggerCardFlash(card, "success");
+            updaters[type](payload);\r\n            if (!cardHidden) {\r\n              triggerCardFlash(card, "success");\r\n            }
             if (!options.silentSuccess) {
               const successMessage = successMessages[type] || "Refresh complete";
               const variant = successMessages[type] ? type : "crypto";
@@ -927,8 +1006,7 @@
             }
           } catch (error) {
             console.error(`Failed to refresh ${type} data:`, error);
-            handleRefreshFailure(type);
-            triggerCardFlash(card, "error");
+            handleRefreshFailure(type);\r\n            if (!cardHidden) {\r\n              triggerCardFlash(card, "error");\r\n            }
             if (!options.silentFailure) {
               const failureMessage = failureMessages[type] || "Refresh failed.";
               showRefreshToast("error", failureMessage);
@@ -941,15 +1019,14 @@
             }
             refreshLocks[type] = false;
           }
-        };
-
-        buttons.forEach((button) => {
+        }\r\n\r\n        buttons.forEach((button) => {
           const endpoint = button.dataset.refreshEndpoint;
           const type = button.dataset.refreshType;
           if (!endpoint || !type || !(type in updaters)) return;
           const card = button.closest(".card-section");
+          const column = button.closest("[data-card]");
 
-          refreshTargets[type] = { button, endpoint, card };
+          refreshTargets[type] = { button, endpoint, card, column };
 
           button.addEventListener("click", () => {
             performRefresh(type, { source: "manual" });
@@ -960,27 +1037,27 @@
         let autoRefreshIntervalId = null;
         let autoRefreshCycleInFlight = false;
 
-        const stopAutoRefresh = () => {
+        function stopAutoRefresh() {
           if (autoRefreshIntervalId) {
             window.clearInterval(autoRefreshIntervalId);
             autoRefreshIntervalId = null;
           }
-        };
+        }
 
-        const autoRefreshCycle = async () => {
+        async function autoRefreshCycle() {
           if (autoRefreshCycleInFlight) return;
           autoRefreshCycleInFlight = true;
           try {
             for (const type of refreshOrder) {
               if (!refreshTargets[type]) continue;
-              await performRefresh(type, { source: "auto" });
+              await performRefresh(type, { source: "auto", silentSuccess: true, silentFailure: true });
             }
           } finally {
             autoRefreshCycleInFlight = false;
           }
-        };
+        }
 
-        const startAutoRefresh = () => {
+        function startAutoRefresh() {
           stopAutoRefresh();
           if (!refreshOrder.some((type) => refreshTargets[type])) {
             return;
@@ -988,9 +1065,124 @@
           autoRefreshCycle();
           autoRefreshIntervalId = window.setInterval(
             autoRefreshCycle,
-            AUTO_REFRESH_INTERVAL_MS
+            autoRefreshIntervalMs
           );
+        }
+
+        const applySettingsUpdate = (updates, context = {}) => {
+          if (!updates || typeof updates !== "object") return;
+          const previousSettings = { ...currentSettings };
+          const { optimistic = false } = context;
+
+          currentSettings = {
+            ...currentSettings,
+            ...updates,
+          };
+
+          currentSettings.show_crypto = Boolean(currentSettings.show_crypto);
+          currentSettings.show_weather = Boolean(currentSettings.show_weather);
+          currentSettings.show_news = Boolean(currentSettings.show_news);
+
+          if (
+            !Number.isFinite(Number(currentSettings.refresh_interval)) ||
+            Number(currentSettings.refresh_interval) < 1
+          ) {
+            currentSettings.refresh_interval = previousSettings.refresh_interval;
+          } else {
+            currentSettings.refresh_interval = Math.max(
+              Number(currentSettings.refresh_interval),
+              1
+            );
+          }
+
+          if (!currentSettings.default_city) {
+            currentSettings.default_city = previousSettings.default_city;
+          }
+
+          rootEl.dataset.showCrypto = String(currentSettings.show_crypto);
+          rootEl.dataset.showWeather = String(currentSettings.show_weather);
+          rootEl.dataset.showNews = String(currentSettings.show_news);
+          rootEl.dataset.defaultCity = currentSettings.default_city;
+          rootEl.dataset.autoRefreshInterval = String(currentSettings.refresh_interval);
+
+          updateCardVisibility(currentSettings);
+
+          if (
+            currentSettings.default_city &&
+            currentSettings.default_city !== previousSettings.default_city
+          ) {
+            const params =
+              optimistic && Object.prototype.hasOwnProperty.call(updates, "default_city")
+                ? { city: updates.default_city }
+                : undefined;
+            performRefresh("weather", {
+              source: "settings",
+              silentSuccess: true,
+              silentFailure: true,
+              force: true,\r\n              params,\r\n              silentButtonDisable: true,
+            });
+          }
+
+          if (
+            currentSettings.refresh_interval !== previousSettings.refresh_interval
+          ) {
+            autoRefreshIntervalMs = currentSettings.refresh_interval * 60 * 1000;
+            if (autoRefreshToggle?.checked) {
+              startAutoRefresh();
+            }
+          }
+
+          refreshOrder.forEach((type) => {
+            const field = `show_${type}`;
+            if (
+              field in updates &&
+              currentSettings[field] &&
+              !previousSettings[field]
+            ) {
+              performRefresh(type, {
+                source: "settings",
+                silentSuccess: true,
+                silentFailure: true,
+                force: true,
+                silentButtonDisable: true,
+              });
+            }
+          });
         };
+
+        const handleSettingsMessage = (data) => {
+          const settingsPayload = data?.settings || data;
+          if (!settingsPayload || typeof settingsPayload !== "object") return;
+          const isOptimistic =
+            Boolean(data?.optimistic) ||
+            Boolean(data?.meta && data.meta.optimistic);
+          const signature = JSON.stringify({
+            settings: settingsPayload,
+            optimistic: isOptimistic,
+          });
+          if (signature === lastSettingsSyncSignature) return;
+          lastSettingsSyncSignature = signature;
+          applySettingsUpdate(settingsPayload, { optimistic: isOptimistic, meta: data?.meta || {} });
+          if (!isOptimistic) {
+            showRefreshToast("crypto", "Settings updated");
+          }
+        };
+
+        if (settingsChannel) {
+          settingsChannel.addEventListener("message", (event) => {
+            handleSettingsMessage(event.data);
+          });
+        }
+
+        window.addEventListener("storage", (event) => {
+          if (event.key !== STORAGE_SYNC_KEY || !event.newValue) return;
+          try {
+            const payload = JSON.parse(event.newValue);
+            handleSettingsMessage(payload);
+          } catch (error) {
+            console.warn("Unable to parse stored settings payload", error);
+          }
+        });
 
         if (autoRefreshToggle) {
           autoRefreshToggle.addEventListener("change", (event) => {
@@ -1010,11 +1202,5 @@
     </script>
   </body>
 </html>
-
-
-
-
-
-
 
 

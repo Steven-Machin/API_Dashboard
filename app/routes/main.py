@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any, Dict, List
 
-from flask import Blueprint, flash, g, redirect, render_template, request, url_for
+from flask import Blueprint, flash, g, jsonify, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 
 from app.extensions import db
@@ -40,6 +40,8 @@ def index():
 
     return render_template(
         "index.html",
+        settings=settings,
+        settings_payload=settings.to_dict(),
         current_user=current_user,
         show_crypto=settings.show_crypto,
         show_weather=settings.show_weather,
@@ -86,3 +88,58 @@ def settings():
         return redirect(url_for("main.settings"))
 
     return render_template("settings.html", settings=settings, current_user=current_user)
+
+
+def _coerce_bool(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        return value.strip().lower() in {"1", "true", "on", "yes"}
+    return bool(value)
+
+
+@main_bp.route("/api/settings", methods=["PATCH"])
+@login_required
+def update_settings_api():
+    if not request.is_json:
+        return jsonify({"error": "Expected JSON payload."}), 400
+
+    settings = get_user_settings()
+    payload = request.get_json(silent=True) or {}
+    if not isinstance(payload, dict):
+        return jsonify({"error": "Invalid JSON payload."}), 400
+
+    updated_fields: Dict[str, Any] = {}
+
+    if "show_crypto" in payload:
+        settings.show_crypto = _coerce_bool(payload["show_crypto"])
+        updated_fields["show_crypto"] = settings.show_crypto
+
+    if "show_weather" in payload:
+        settings.show_weather = _coerce_bool(payload["show_weather"])
+        updated_fields["show_weather"] = settings.show_weather
+
+    if "show_news" in payload:
+        settings.show_news = _coerce_bool(payload["show_news"])
+        updated_fields["show_news"] = settings.show_news
+
+    if "default_city" in payload:
+        default_city = str(payload["default_city"] or "").strip() or "Chicago"
+        settings.default_city = default_city
+        updated_fields["default_city"] = default_city
+
+    if "refresh_interval" in payload:
+        try:
+            refresh_interval = max(int(payload["refresh_interval"]), 1)
+        except (TypeError, ValueError):
+            return jsonify({"error": "refresh_interval must be an integer value >= 1."}), 400
+        settings.refresh_interval = refresh_interval
+        updated_fields["refresh_interval"] = refresh_interval
+
+    if not updated_fields:
+        return jsonify({"settings": settings.to_dict(), "updated": {}}), 200
+
+    db.session.commit()
+    g._user_settings = settings
+
+    return jsonify({"settings": settings.to_dict(), "updated": updated_fields}), 200
