@@ -20,6 +20,7 @@
     <style>
       body {
         background: #f1f5f9;
+        padding-bottom: 4rem;
       }
 
       .page-header {
@@ -29,6 +30,18 @@
       .card-settings {
         border-radius: 1rem;
         box-shadow: 0 14px 45px -18px rgba(15, 23, 42, 0.45);
+      }
+
+      .app-footer {
+        background: rgba(15, 23, 42, 0.92);
+        color: #94a3b8;
+        font-size: 0.85rem;
+        left: 0;
+        bottom: 0;
+        padding: 0.75rem 0;
+        position: fixed;
+        width: 100%;
+        z-index: 1030;
       }
     </style>
   </head>
@@ -366,6 +379,9 @@
         });
       });
     </script>
+    <footer class="app-footer text-center">
+      <small>API Dashboard &copy; 2025 &ndash; Built by Steven Machin</small>
+    </footer>
   </body>
 </html>
 
