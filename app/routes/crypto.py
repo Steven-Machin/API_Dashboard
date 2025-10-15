@@ -1,3 +1,5 @@
+"""Expose cryptocurrency pricing endpoints for the dashboard."""
+
 from datetime import datetime, timezone
 
 from flask import Blueprint, jsonify

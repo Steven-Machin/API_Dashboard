@@ -1,3 +1,5 @@
+"""Serve weather forecast data for the dashboard."""
+
 from datetime import datetime, timezone
 
 from flask import Blueprint, jsonify, request

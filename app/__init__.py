@@ -17,8 +17,12 @@ def create_app() -> Flask:
     """Application factory that wires Blueprints together."""
     app = Flask(__name__)
 
-    app.config.setdefault("SECRET_KEY", os.environ.get("FLASK_SECRET_KEY", "dev-secret-key"))
-    app.config.setdefault("SQLALCHEMY_DATABASE_URI", os.environ.get("DATABASE_URL", "sqlite:///app.db"))
+    app.config.setdefault(
+        "SECRET_KEY", os.environ.get("FLASK_SECRET_KEY", "dev-secret-key")
+    )
+    app.config.setdefault(
+        "SQLALCHEMY_DATABASE_URI", os.environ.get("DATABASE_URL", "sqlite:///app.db")
+    )
     app.config.setdefault("SQLALCHEMY_TRACK_MODIFICATIONS", False)
 
     db.init_app(app)

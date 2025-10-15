@@ -1,3 +1,5 @@
+"""Provide headline data endpoints for the dashboard."""
+
 from datetime import datetime, timezone
 
 from flask import Blueprint, jsonify

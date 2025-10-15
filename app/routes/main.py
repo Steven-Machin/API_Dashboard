@@ -1,9 +1,20 @@
+"""Core dashboard views and settings APIs."""
+
 from __future__ import annotations
 
 from datetime import datetime, timezone
 from typing import Any, Dict, List
 
-from flask import Blueprint, flash, g, jsonify, redirect, render_template, request, url_for
+from flask import (
+    Blueprint,
+    flash,
+    g,
+    jsonify,
+    redirect,
+    render_template,
+    request,
+    url_for,
+)
 from flask_login import current_user, login_required
 
 from app.extensions import db
@@ -69,7 +80,9 @@ def settings():
         default_city = (request.form.get("default_city") or "").strip() or "Chicago"
 
         try:
-            refresh_interval = int(request.form.get("auto_refresh_interval") or settings.refresh_interval)
+            refresh_interval = int(
+                request.form.get("auto_refresh_interval") or settings.refresh_interval
+            )
         except (TypeError, ValueError):
             refresh_interval = settings.refresh_interval
 
@@ -87,7 +100,9 @@ def settings():
         flash("Settings saved successfully.", "success")
         return redirect(url_for("main.settings"))
 
-    return render_template("settings.html", settings=settings, current_user=current_user)
+    return render_template(
+        "settings.html", settings=settings, current_user=current_user
+    )
 
 
 def _coerce_bool(value: Any) -> bool:
@@ -132,7 +147,10 @@ def update_settings_api():
         try:
             refresh_interval = max(int(payload["refresh_interval"]), 1)
         except (TypeError, ValueError):
-            return jsonify({"error": "refresh_interval must be an integer value >= 1."}), 400
+            return (
+                jsonify({"error": "refresh_interval must be an integer value >= 1."}),
+                400,
+            )
         settings.refresh_interval = refresh_interval
         updated_fields["refresh_interval"] = refresh_interval
 

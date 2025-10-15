@@ -28,7 +28,9 @@ class UserSettings(db.Model):
     __tablename__ = "user_settings"
 
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, unique=True)
+    user_id = db.Column(
+        db.Integer, db.ForeignKey("users.id"), nullable=False, unique=True
+    )
     show_crypto = db.Column(db.Boolean, nullable=False, default=True)
     show_weather = db.Column(db.Boolean, nullable=False, default=True)
     show_news = db.Column(db.Boolean, nullable=False, default=True)
