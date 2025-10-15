@@ -402,6 +402,10 @@
         background-color: #dc2626;
       }
 
+      .refresh-toast.toast-shortcut {
+        background-color: #475569;
+      }
+
       .card-section[data-theme="crypto"] .card-header {
         background: var(--crypto-grad);
         color: #0f172a;
@@ -1133,6 +1137,7 @@
           crypto: { className: "toast-crypto", label: "Crypto" },
           weather: { className: "toast-weather", label: "Weather" },
           news: { className: "toast-news", label: "News" },
+          shortcut: { className: "toast-shortcut", label: "Dashboard" },
           error: { className: "toast-error", label: "Refresh Failed" },
         }
         const toastVariantClasses = Object.values(toastVariants).map(
@@ -1255,6 +1260,34 @@
             hour12: false,
             timeZoneName: "short",
           }).format(safeDate);
+        }
+
+        const NON_TYPING_INPUT_TYPES = new Set([
+          "button",
+          "checkbox",
+          "color",
+          "file",
+          "hidden",
+          "image",
+          "radio",
+          "range",
+          "reset",
+          "submit",
+        ]);
+
+        const isTypingTarget = (element) => {
+          if (!element) return false;
+          if (element.isContentEditable) return true;
+          const tagName = element.tagName ? element.tagName.toLowerCase() : "";
+          if (!tagName) return false;
+          if (tagName === "textarea" || tagName === "select") return true;
+          if (tagName === "input") {
+            const type = element.type ? element.type.toLowerCase() : "";
+            return !NON_TYPING_INPUT_TYPES.has(type);
+          }
+          const role = typeof element.getAttribute === "function" ? element.getAttribute("role") : null;
+          if (role && role.toLowerCase() === "textbox") return true;
+          return false;
         }
 
         const updaters = {
@@ -1420,6 +1453,7 @@
 
         const refreshTargets = {};
         const refreshLocks = {};
+        let shortcutRefreshInFlight = false;
 
         const handleRefreshFailure = (type) => {
           const updatedElementId =
@@ -1508,6 +1542,33 @@
             performRefresh(type, { source: "manual" });
           });
         });
+
+        const refreshAllViaShortcut = async () => {
+          if (shortcutRefreshInFlight || autoRefreshCycleInFlight) return;
+          const typesToRefresh = refreshOrder.filter(
+            (type) =>
+              refreshTargets[type] &&
+              !refreshLocks[type] &&
+              currentSettings[`show_${type}`]
+          );
+          if (!typesToRefresh.length) return;
+          shortcutRefreshInFlight = true;
+          try {
+            let refreshedAny = false;
+            for (const type of typesToRefresh) {
+              await performRefresh(type, {
+                source: "shortcut",
+                silentSuccess: true,
+              });
+              refreshedAny = true;
+            }
+            if (refreshedAny) {
+              showRefreshToast("shortcut", "Dashboard refreshed via shortcut");
+            }
+          } finally {
+            shortcutRefreshInFlight = false;
+          }
+        };
 
         const autoRefreshToggle = document.getElementById("auto-refresh-toggle");
         let autoRefreshIntervalId = null;
@@ -1733,6 +1794,19 @@
           } catch (error) {
             console.warn("Unable to parse stored settings payload", error);
           }
+        });
+
+        document.addEventListener("keydown", (event) => {
+          if (event.defaultPrevented) return;
+          if (event.repeat) return;
+          const key = typeof event.key === "string" ? event.key.toLowerCase() : "";
+          if (key !== "r") return;
+          if (event.altKey || event.ctrlKey || event.metaKey) return;
+          const activeElement = document.activeElement;
+          const targetElement = event.target || activeElement;
+          if (isTypingTarget(targetElement) || isTypingTarget(activeElement)) return;
+          event.preventDefault();
+          refreshAllViaShortcut();
         });
 
         renderAutoRefreshCountdown();
