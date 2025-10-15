@@ -142,6 +142,22 @@
         transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, transform 0.3s ease;
       }
 
+      .auto-refresh-countdown-bar {
+        background: transparent;
+        border-bottom: 1px solid var(--surface-border);
+        transition: border-color 0.4s ease, background-color 0.4s ease;
+      }
+
+      .auto-refresh-countdown {
+        color: var(--text-muted);
+        padding: 0.55rem 0;
+        transition: color 0.3s ease;
+      }
+
+      .auto-refresh-countdown.is-active {
+        color: var(--text-subtle);
+      }
+
       .navbar-theme .theme-nav-btn:hover,
       .navbar-theme .theme-nav-btn:focus-visible {
         background: var(--navbar-button-bg-hover);
@@ -565,7 +581,18 @@
         </div>
       </div>
     </nav>
-
+    <div class="auto-refresh-countdown-bar">
+      <div class="container text-center">
+        <div
+          id="auto-refresh-countdown"
+          class="auto-refresh-countdown small"
+          role="status"
+          aria-live="polite"
+        >
+          Auto refresh paused
+        </div>
+      </div>
+    </div>
     <main class="container flex-grow-1 py-5">
       <div class="text-center mb-5">
         <h1 class="display-5 fw-bold text-dark">API Dashboard</h1>
@@ -1018,6 +1045,8 @@
         }
 
         let autoRefreshIntervalMs = currentSettings.refresh_interval * 60 * 1000;
+        let autoRefreshCountdownIntervalId = null;
+        let autoRefreshCountdownRemainingMs = autoRefreshIntervalMs;
         let lastSettingsSyncSignature = JSON.stringify({ settings: currentSettings, optimistic: false });
         const buttons = document.querySelectorAll("[data-refresh-endpoint]");
         const refreshOrder = ["crypto", "weather", "news"];
@@ -1027,6 +1056,7 @@
           news: document.querySelector('[data-card="news"]'),
         }
         const emptyStateEl = document.getElementById("cards-empty-state");
+        const autoRefreshCountdownEl = document.getElementById("auto-refresh-countdown");
 
         const { Toast: BootstrapToast } = window.bootstrap || {};
         const toastEl = document.getElementById("refresh-toast");
@@ -1424,16 +1454,86 @@
         let autoRefreshIntervalId = null;
         let autoRefreshCycleInFlight = false;
 
+        const renderAutoRefreshCountdown = (options = {}) => {
+          if (!autoRefreshCountdownEl) return;
+          const { message, active = false, forcePaused = false } = options;
+          if (message) {
+            autoRefreshCountdownEl.textContent = message;
+            autoRefreshCountdownEl.classList.toggle("is-active", active);
+            return;
+          }
+          const toggleEnabled = Boolean(autoRefreshToggle?.checked);
+          if (!toggleEnabled || forcePaused) {
+            autoRefreshCountdownEl.textContent = "Auto refresh paused";
+            autoRefreshCountdownEl.classList.remove("is-active");
+            return;
+          }
+          const remainingSeconds = Math.max(
+            0,
+            Math.ceil(autoRefreshCountdownRemainingMs / 1000)
+          );
+          const minutes = String(Math.floor(remainingSeconds / 60)).padStart(2, "0");
+          const seconds = String(remainingSeconds % 60).padStart(2, "0");
+          autoRefreshCountdownEl.textContent = `Refreshing in: ${minutes}:${seconds}`;
+          autoRefreshCountdownEl.classList.add("is-active");
+        };
+
+        const stopAutoRefreshCountdown = () => {
+          if (autoRefreshCountdownIntervalId) {
+            window.clearInterval(autoRefreshCountdownIntervalId);
+            autoRefreshCountdownIntervalId = null;
+          }
+        };
+
+        const restartAutoRefreshCountdown = () => {
+          if (!autoRefreshCountdownEl) return;
+          if (!autoRefreshToggle || !autoRefreshToggle.checked) {
+            stopAutoRefreshCountdown();
+            renderAutoRefreshCountdown();
+            return;
+          }
+          if (!refreshOrder.some((type) => refreshTargets[type])) {
+            stopAutoRefreshCountdown();
+            renderAutoRefreshCountdown({ forcePaused: true });
+            return;
+          }
+          stopAutoRefreshCountdown();
+          autoRefreshCountdownRemainingMs = autoRefreshIntervalMs;
+          renderAutoRefreshCountdown();
+          autoRefreshCountdownIntervalId = window.setInterval(() => {
+            autoRefreshCountdownRemainingMs = Math.max(
+              0,
+              autoRefreshCountdownRemainingMs - 1000
+            );
+            renderAutoRefreshCountdown();
+            if (autoRefreshCountdownRemainingMs === 0) {
+              stopAutoRefreshCountdown();
+            }
+          }, 1000);
+        };
+
+        const indicateAutoRefreshRunning = () => {
+          if (!autoRefreshCountdownEl || !autoRefreshToggle?.checked) return;
+          stopAutoRefreshCountdown();
+          renderAutoRefreshCountdown({
+            message: "Refreshing now...",
+            active: true,
+          });
+        };
+
         function stopAutoRefresh() {
           if (autoRefreshIntervalId) {
             window.clearInterval(autoRefreshIntervalId);
             autoRefreshIntervalId = null;
           }
+          stopAutoRefreshCountdown();
+          renderAutoRefreshCountdown({ forcePaused: true });
         }
 
         async function autoRefreshCycle() {
           if (autoRefreshCycleInFlight) return;
           autoRefreshCycleInFlight = true;
+          indicateAutoRefreshRunning();
           try {
             for (const type of refreshOrder) {
               if (!refreshTargets[type]) continue;
@@ -1441,12 +1541,14 @@
             }
           } finally {
             autoRefreshCycleInFlight = false;
+            restartAutoRefreshCountdown();
           }
         }
 
         function startAutoRefresh() {
           stopAutoRefresh();
           if (!refreshOrder.some((type) => refreshTargets[type])) {
+            renderAutoRefreshCountdown({ forcePaused: true });
             return;
           }
           autoRefreshCycle();
@@ -1516,6 +1618,9 @@
             autoRefreshIntervalMs = currentSettings.refresh_interval * 60 * 1000;
             if (autoRefreshToggle?.checked) {
               startAutoRefresh();
+            } else {
+              autoRefreshCountdownRemainingMs = autoRefreshIntervalMs;
+              renderAutoRefreshCountdown({ forcePaused: true });
             }
           }
 
@@ -1570,6 +1675,8 @@
             console.warn("Unable to parse stored settings payload", error);
           }
         });
+
+        renderAutoRefreshCountdown();
 
         if (autoRefreshToggle) {
           autoRefreshToggle.addEventListener("change", (event) => {
