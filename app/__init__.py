@@ -11,12 +11,14 @@ from .routes.crypto import crypto_bp
 from .routes.main import main_bp
 from .routes.news import news_bp
 from .routes.weather import weather_bp
+from config import APP_VERSION
 
 
 def create_app() -> Flask:
     """Application factory that wires Blueprints together."""
     app = Flask(__name__)
 
+    app.config.setdefault("APP_VERSION", APP_VERSION)
     app.config.setdefault(
         "SECRET_KEY", os.environ.get("FLASK_SECRET_KEY", "dev-secret-key")
     )
@@ -43,5 +45,9 @@ def create_app() -> Flask:
 
     with app.app_context():
         db.create_all()
+
+    @app.context_processor
+    def inject_version() -> dict[str, str | None]:
+        return {"app_version": app.config.get("APP_VERSION")}
 
     return app
