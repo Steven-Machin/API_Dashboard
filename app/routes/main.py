@@ -22,6 +22,7 @@ from app.services.crypto_service import get_crypto_prices
 from app.services.news_service import get_headlines
 from app.services.settings_service import get_user_settings
 from app.services.weather_service import get_weather_forecast
+from app.services.history_service import get_crypto_history, get_weather_history
 
 main_bp = Blueprint("main", __name__)
 
@@ -110,6 +111,22 @@ def settings():
 def insights():
     """Render the insights dashboard with trend placeholders."""
     return render_template("insights.html")
+
+
+@main_bp.route("/api/crypto_history")
+@login_required
+def api_crypto_history():
+    """Expose the recent crypto history entries for chart rendering."""
+    payload = get_crypto_history()
+    return jsonify({"data": payload, "count": len(payload)})
+
+
+@main_bp.route("/api/weather_history")
+@login_required
+def api_weather_history():
+    """Expose the recent weather history entries for chart rendering."""
+    payload = get_weather_history()
+    return jsonify({"data": payload, "count": len(payload)})
 
 
 def _coerce_bool(value: Any) -> bool:

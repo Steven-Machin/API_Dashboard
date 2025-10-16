@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from typing import Any, Dict, List
 from app.extensions import db
 from app.models import CryptoHistory, WeatherHistory
 
@@ -52,3 +53,44 @@ def save_weather_data(
 
     _prune_history(WeatherHistory, limit=50)
     db.session.commit()
+
+
+def get_crypto_history(limit: int = 50) -> List[Dict[str, Any]]:
+    """Return the newest crypto history entries ordered oldest → newest."""
+    rows = (
+        CryptoHistory.query.order_by(
+            CryptoHistory.timestamp.desc(), CryptoHistory.id.desc()
+        )
+        .limit(limit)
+        .all()
+    )
+    # Reverse to deliver chronological order to the client.
+    ordered = list(reversed(rows))
+    return [
+        {
+            "timestamp": row.timestamp.isoformat(),
+            "bitcoin_price": float(row.bitcoin_price),
+            "ethereum_price": float(row.ethereum_price),
+        }
+        for row in ordered
+    ]
+
+
+def get_weather_history(limit: int = 50) -> List[Dict[str, Any]]:
+    """Return the newest weather history entries ordered oldest → newest."""
+    rows = (
+        WeatherHistory.query.order_by(
+            WeatherHistory.timestamp.desc(), WeatherHistory.id.desc()
+        )
+        .limit(limit)
+        .all()
+    )
+    ordered = list(reversed(rows))
+    return [
+        {
+            "timestamp": row.timestamp.isoformat(),
+            "temperature": float(row.temperature),
+            "condition": row.condition,
+        }
+        for row in ordered
+    ]

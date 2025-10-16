@@ -59,6 +59,16 @@
         --card-shadow-hover: 0 24px 54px -24px rgba(15, 23, 42, 0.48);
         --footer-bg: rgba(15, 23, 42, 0.92);
         --footer-text: #94a3b8;
+        --chart-grid: rgba(15, 23, 42, 0.1);
+        --chart-legend: #0f172a;
+        --chart-tooltip-bg: rgba(15, 23, 42, 0.92);
+        --chart-tooltip-text: #f8fafc;
+        --chart-line-btc: #f97316;
+        --chart-line-btc-fill: rgba(249, 115, 22, 0.16);
+        --chart-line-eth: #6366f1;
+        --chart-line-eth-fill: rgba(99, 102, 241, 0.18);
+        --chart-line-temp: #0ea5e9;
+        --chart-line-temp-fill: rgba(14, 165, 233, 0.18);
       }
 
       html.theme-dark {
@@ -79,6 +89,16 @@
         --card-shadow-hover: 0 26px 54px -24px rgba(2, 6, 23, 0.72);
         --footer-bg: rgba(2, 6, 12, 0.92);
         --footer-text: #64748b;
+        --chart-grid: rgba(148, 163, 184, 0.24);
+        --chart-legend: #e2e8f0;
+        --chart-tooltip-bg: rgba(15, 23, 42, 0.88);
+        --chart-tooltip-text: #f8fafc;
+        --chart-line-btc: #fb923c;
+        --chart-line-btc-fill: rgba(251, 146, 60, 0.18);
+        --chart-line-eth: #818cf8;
+        --chart-line-eth-fill: rgba(129, 140, 248, 0.18);
+        --chart-line-temp: #38bdf8;
+        --chart-line-temp-fill: rgba(56, 189, 248, 0.2);
       }
 
       body {
@@ -238,16 +258,56 @@
         max-width: 680px;
       }
 
+      .charts-toolbar {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 2rem;
+      }
+
+      .charts-refresh-btn {
+        align-items: center;
+        border-radius: 999px;
+        display: inline-flex;
+        gap: 0.5rem;
+        padding: 0.6rem 1.6rem;
+        font-weight: 600;
+        letter-spacing: 0.01em;
+      }
+
+      .charts-refresh-btn .spinner-border {
+        width: 1rem;
+        height: 1rem;
+      }
+
+      .charts-refresh-btn.is-loading {
+        pointer-events: none;
+      }
+
+      .chart-wrapper {
+        position: relative;
+        width: 100%;
+        height: 340px;
+      }
+
       .chart-canvas {
         background: rgba(15, 23, 42, 0.04);
         border-radius: 12px;
         margin-top: 1rem;
-        min-height: 320px;
         width: 100%;
+        height: 100% !important;
       }
 
       html.theme-dark .chart-canvas {
         background: rgba(148, 163, 184, 0.08);
+      }
+
+      .chart-status {
+        color: var(--text-muted);
+        margin-top: 0.5rem;
+      }
+
+      .chart-status.text-danger {
+        color: #dc3545 !important;
       }
 
       .app-footer {
@@ -273,6 +333,10 @@
 
         .card-body {
           padding: 1.25rem;
+        }
+
+        .chart-wrapper {
+          height: 300px;
         }
       }
     </style>
@@ -336,6 +400,17 @@
         </p>
       </header>
 
+      <div class="charts-toolbar">
+        <button
+          type="button"
+          class="btn btn-primary charts-refresh-btn"
+          id="refresh-charts"
+        >
+          <i class="fa-solid fa-rotate"></i>
+          <span>Refresh Charts</span>
+        </button>
+      </div>
+
       <div class="row g-4">
         <div class="col-12 col-lg-6">
           <section class="card card-section h-100">
@@ -349,15 +424,22 @@
               </div>
             </div>
             <div class="card-body">
-              <p class="card-placeholder mb-3">
-                Trend visualizations will appear here once charting is enabled.
+              <p class="card-placeholder mb-3" data-chart-placeholder="crypto">
+                No crypto history captured yet. Refresh after data has been collected.
               </p>
-              <canvas
-                id="crypto-trends-canvas"
-                class="chart-canvas"
-                role="img"
-                aria-label="Crypto trends line chart placeholder"
-              ></canvas>
+              <div class="chart-wrapper">
+                <canvas
+                  id="crypto-trends-canvas"
+                  class="chart-canvas"
+                  role="img"
+                  aria-label="Crypto trends line chart"
+                ></canvas>
+              </div>
+              <div
+                class="chart-status small d-none"
+                data-chart-error="crypto"
+                role="status"
+              ></div>
             </div>
           </section>
         </div>
@@ -373,15 +455,22 @@
               </div>
             </div>
             <div class="card-body">
-              <p class="card-placeholder mb-3">
-                This space is ready for weather analytics powered by Chart.js.
+              <p class="card-placeholder mb-3" data-chart-placeholder="weather">
+                Weather insights will display once data points have been logged.
               </p>
-              <canvas
-                id="weather-trends-canvas"
-                class="chart-canvas"
-                role="img"
-                aria-label="Weather trends chart placeholder"
-              ></canvas>
+              <div class="chart-wrapper">
+                <canvas
+                  id="weather-trends-canvas"
+                  class="chart-canvas"
+                  role="img"
+                  aria-label="Weather trends chart"
+                ></canvas>
+              </div>
+              <div
+                class="chart-status small d-none"
+                data-chart-error="weather"
+                role="status"
+              ></div>
             </div>
           </section>
         </div>
@@ -392,41 +481,551 @@
       <small class="mb-0">API Dashboard &copy; 2025 &ndash; Built by Steven Machin</small>
     </footer>
 
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
     <script>
       document.addEventListener("DOMContentLoaded", () => {
+        if (!window.Chart) {
+          console.error("Chart.js failed to load; insights charts unavailable.");
+          return;
+        }
+
         const STORAGE_KEY = "api-dashboard:theme";
+        const ENDPOINTS = {
+          cryptoHistory: "{{ url_for('main.api_crypto_history') }}",
+          weatherHistory: "{{ url_for('main.api_weather_history') }}",
+        };
+
         const themeToggleButton = document.getElementById("theme-toggle");
-        if (!themeToggleButton) return;
+        const refreshButton = document.getElementById("refresh-charts");
+        const cryptoCanvas = document.getElementById("crypto-trends-canvas");
+        const weatherCanvas = document.getElementById("weather-trends-canvas");
+
+        if (!cryptoCanvas || !weatherCanvas) {
+          console.warn("Missing chart canvases; insights initialisation skipped.");
+          return;
+        }
+
+        const placeholders = {
+          crypto: document.querySelector('[data-chart-placeholder="crypto"]'),
+          weather: document.querySelector('[data-chart-placeholder="weather"]'),
+        };
+        Object.values(placeholders).forEach((el) => {
+          if (el && !el.dataset.defaultMessage) {
+            el.dataset.defaultMessage = el.textContent.trim();
+          }
+        });
+
+        const errorElements = {
+          crypto: document.querySelector('[data-chart-error="crypto"]'),
+          weather: document.querySelector('[data-chart-error="weather"]'),
+        };
+
+        const chartInstances = { crypto: null, weather: null };
+        const chartMeta = { crypto: [], weather: [] };
+
+        const currencyFormatter = (() => {
+          try {
+            return new Intl.NumberFormat(undefined, {
+              style: "currency",
+              currency: "USD",
+              maximumFractionDigits: 2,
+            });
+          } catch {
+            return { format: (value) => `$${Number(value).toFixed(2)}` };
+          }
+        })();
+
+        const formatCurrency = (value) => {
+          if (value === null || Number.isNaN(value)) return "N/A";
+          return currencyFormatter.format(Number(value));
+        };
+
+        const formatTemperatureTick = (value) =>
+          `${Math.round(Number(value))}\u00B0`;
+        const formatTemperatureValue = (value) =>
+          `${Number(value).toFixed(1)}\u00B0`;
+
+        const timestampFormatter = new Intl.DateTimeFormat(undefined, {
+          month: "short",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+
+        const tooltipTimestampFormatter = new Intl.DateTimeFormat(undefined, {
+          year: "numeric",
+          month: "short",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+
+        const formatLabel = (date) =>
+          date ? timestampFormatter.format(date) : "Unknown";
+        const formatTooltipLabel = (date) =>
+          date ? tooltipTimestampFormatter.format(date) : "Unknown";
+
+        const readCssVar = (name, fallback) => {
+          const styles = getComputedStyle(document.documentElement);
+          const value = styles.getPropertyValue(name);
+          return (value && value.trim()) || fallback;
+        };
+
+        const getThemeColors = () => ({
+          text: readCssVar("--text-primary", "#0f172a"),
+          muted: readCssVar("--text-muted", "#64748b"),
+          grid: readCssVar("--chart-grid", "rgba(15, 23, 42, 0.12)"),
+          legend: readCssVar("--chart-legend", "#0f172a"),
+          tooltipBg: readCssVar("--chart-tooltip-bg", "rgba(15, 23, 42, 0.92)"),
+          tooltipText: readCssVar("--chart-tooltip-text", "#f8fafc"),
+          lines: {
+            bitcoin: readCssVar("--chart-line-btc", "#f97316"),
+            ethereum: readCssVar("--chart-line-eth", "#6366f1"),
+            temperature: readCssVar("--chart-line-temp", "#0ea5e9"),
+          },
+          fills: {
+            bitcoin: readCssVar("--chart-line-btc-fill", "rgba(249, 115, 22, 0.16)"),
+            ethereum: readCssVar("--chart-line-eth-fill", "rgba(99, 102, 241, 0.18)"),
+            temperature: readCssVar("--chart-line-temp-fill", "rgba(14, 165, 233, 0.2)"),
+          },
+        });
+
+        const togglePlaceholder = (type, show, message) => {
+          const el = placeholders[type];
+          if (!el) return;
+          if (show) {
+            if (message) {
+              el.textContent = message;
+            } else if (el.dataset.defaultMessage) {
+              el.textContent = el.dataset.defaultMessage;
+            }
+            el.classList.remove("d-none");
+          } else {
+            el.classList.add("d-none");
+          }
+        };
+
+        const setErrorMessage = (type, message) => {
+          const el = errorElements[type];
+          if (!el) return;
+          if (message) {
+            el.textContent = message;
+            el.classList.remove("d-none");
+          } else {
+            el.textContent = "";
+            el.classList.add("d-none");
+          }
+        };
+
+        const setRefreshState = (isLoading) => {
+          if (!refreshButton) return;
+          if (isLoading) {
+            if (!refreshButton.dataset.originalLabel) {
+              refreshButton.dataset.originalLabel = refreshButton.innerHTML;
+            }
+            refreshButton.innerHTML =
+              '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Refreshing';
+          } else if (refreshButton.dataset.originalLabel) {
+            refreshButton.innerHTML = refreshButton.dataset.originalLabel;
+          }
+          refreshButton.disabled = isLoading;
+          refreshButton.classList.toggle("is-loading", isLoading);
+          refreshButton.setAttribute("aria-busy", String(isLoading));
+        };
+
+        const destroyChart = (type) => {
+          const chart = chartInstances[type];
+          if (chart) {
+            chart.destroy();
+            chartInstances[type] = null;
+          }
+        };
+
+        const createBaseLineOptions = (colors) => ({
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: false,
+          interaction: { mode: "index", intersect: false },
+          scales: {
+            x: {
+              grid: { display: false, color: colors.grid },
+              ticks: {
+                color: colors.muted,
+                maxRotation: 0,
+                autoSkip: true,
+                maxTicksLimit: 6,
+              },
+            },
+            y: {
+              grid: { color: colors.grid },
+              ticks: {
+                color: colors.muted,
+                padding: 8,
+              },
+            },
+          },
+          plugins: {
+            legend: {
+              labels: {
+                color: colors.legend,
+                usePointStyle: true,
+                font: { size: 12 },
+              },
+            },
+            tooltip: {
+              backgroundColor: colors.tooltipBg,
+              titleColor: colors.tooltipText,
+              bodyColor: colors.tooltipText,
+              borderColor: colors.grid,
+              borderWidth: 1,
+              padding: 10,
+            },
+          },
+        });
+
+        const updateChartTheme = () => {
+          const colors = getThemeColors();
+          const applyCommon = (chart) => {
+            chart.options.scales.x.grid.color = colors.grid;
+            chart.options.scales.x.ticks.color = colors.muted;
+            chart.options.scales.y.grid.color = colors.grid;
+            chart.options.scales.y.ticks.color = colors.muted;
+            chart.options.plugins.legend.labels.color = colors.legend;
+            chart.options.plugins.tooltip.backgroundColor = colors.tooltipBg;
+            chart.options.plugins.tooltip.titleColor = colors.tooltipText;
+            chart.options.plugins.tooltip.bodyColor = colors.tooltipText;
+            chart.options.plugins.tooltip.borderColor = colors.grid;
+          };
+
+          if (chartInstances.crypto) {
+            const chart = chartInstances.crypto;
+            chart.data.datasets.forEach((dataset) => {
+              if (dataset.label.includes("Bitcoin")) {
+                dataset.borderColor = colors.lines.bitcoin;
+                dataset.backgroundColor = colors.fills.bitcoin;
+                dataset.pointBackgroundColor = colors.lines.bitcoin;
+              } else if (dataset.label.includes("Ethereum")) {
+                dataset.borderColor = colors.lines.ethereum;
+                dataset.backgroundColor = colors.fills.ethereum;
+                dataset.pointBackgroundColor = colors.lines.ethereum;
+              }
+            });
+            applyCommon(chart);
+            chart.update("none");
+          }
+
+          if (chartInstances.weather) {
+            const chart = chartInstances.weather;
+            chart.data.datasets.forEach((dataset) => {
+              dataset.borderColor = colors.lines.temperature;
+              dataset.backgroundColor = colors.fills.temperature;
+              dataset.pointBackgroundColor = colors.lines.temperature;
+            });
+            applyCommon(chart);
+            chart.update("none");
+          }
+        };
 
         const getCurrentTheme = () =>
           document.documentElement.classList.contains("theme-dark") ? "dark" : "light";
 
         const applyTheme = (mode) => {
-          const root = document.documentElement;
           const theme = mode === "dark" ? "dark" : "light";
+          const root = document.documentElement;
           root.classList.remove("theme-dark", "theme-light");
           root.classList.add(`theme-${theme}`);
           root.setAttribute("data-theme", theme);
-          themeToggleButton.setAttribute(
-            "aria-label",
-            theme === "dark" ? "Switch to light mode" : "Switch to dark mode"
-          );
-          themeToggleButton.setAttribute("title", themeToggleButton.getAttribute("aria-label"));
-          themeToggleButton.setAttribute("aria-pressed", theme === "dark");
+          if (themeToggleButton) {
+            const label =
+              theme === "dark" ? "Switch to light mode" : "Switch to dark mode";
+            themeToggleButton.setAttribute("aria-label", label);
+            themeToggleButton.setAttribute("title", label);
+            themeToggleButton.setAttribute("aria-pressed", theme === "dark");
+          }
           try {
             window.localStorage.setItem(STORAGE_KEY, theme);
           } catch {
-            /* ignore storage errors */
+            /* ignore storage writes in private mode */
           }
+          updateChartTheme();
         };
 
         applyTheme(getCurrentTheme());
 
-        themeToggleButton.addEventListener("click", () => {
-          const nextTheme = getCurrentTheme() === "dark" ? "light" : "dark";
-          applyTheme(nextTheme);
-        });
+        if (themeToggleButton) {
+          themeToggleButton.addEventListener("click", () => {
+            const nextTheme = getCurrentTheme() === "dark" ? "light" : "dark";
+            applyTheme(nextTheme);
+          });
+        }
+
+        const fetchJson = async (url) => {
+          const response = await fetch(url, {
+            headers: { Accept: "application/json" },
+          });
+          if (!response.ok) {
+            const error = new Error(`Request failed with status ${response.status}`);
+            error.status = response.status;
+            throw error;
+          }
+          return response.json();
+        };
+
+        const renderCryptoChart = (entries) => {
+          if (!Array.isArray(entries) || entries.length === 0) {
+            destroyChart("crypto");
+            chartMeta.crypto = [];
+            togglePlaceholder("crypto", true);
+            return;
+          }
+
+          const parsed = entries
+            .map((entry) => {
+              const timestamp = entry?.timestamp;
+              const date = timestamp ? new Date(timestamp) : null;
+              if (!date || Number.isNaN(date.getTime())) return null;
+              const btcValue = Number(entry?.bitcoin_price);
+              const ethValue = Number(entry?.ethereum_price);
+              const bitcoin = Number.isFinite(btcValue) ? btcValue : null;
+              const ethereum = Number.isFinite(ethValue) ? ethValue : null;
+              if (bitcoin === null && ethereum === null) return null;
+              return { date, bitcoin, ethereum };
+            })
+            .filter(Boolean);
+
+          if (!parsed.length) {
+            destroyChart("crypto");
+            chartMeta.crypto = [];
+            togglePlaceholder("crypto", true);
+            return;
+          }
+
+          chartMeta.crypto = parsed;
+          const labels = parsed.map((item) => formatLabel(item.date));
+          const colors = getThemeColors();
+          const options = createBaseLineOptions(colors);
+          options.scales.y.ticks.callback = (value) => formatCurrency(value);
+          options.plugins.tooltip.callbacks = {
+            title: (items) => {
+              const index = items[0]?.dataIndex ?? 0;
+              const meta = chartMeta.crypto[index];
+              return formatTooltipLabel(meta?.date);
+            },
+            label: (context) => {
+              const value = context.parsed.y;
+              const datasetLabel = context.dataset.label || "Value";
+              if (value === null || typeof value === "undefined") {
+                return `${datasetLabel}: N/A`;
+              }
+              return `${datasetLabel}: ${formatCurrency(value)}`;
+            },
+          };
+
+          const datasets = [];
+          const btcSeries = parsed.map((item) => item.bitcoin);
+          if (btcSeries.some((value) => value !== null)) {
+            datasets.push({
+              label: "Bitcoin (USD)",
+              data: btcSeries,
+              borderColor: colors.lines.bitcoin,
+              backgroundColor: colors.fills.bitcoin,
+              tension: 0.35,
+              fill: true,
+              spanGaps: true,
+              pointRadius: 2.5,
+              pointHoverRadius: 5,
+              pointHitRadius: 16,
+              pointBorderWidth: 0,
+              pointBackgroundColor: colors.lines.bitcoin,
+            });
+          }
+
+          const ethSeries = parsed.map((item) => item.ethereum);
+          if (ethSeries.some((value) => value !== null)) {
+            datasets.push({
+              label: "Ethereum (USD)",
+              data: ethSeries,
+              borderColor: colors.lines.ethereum,
+              backgroundColor: colors.fills.ethereum,
+              tension: 0.35,
+              fill: true,
+              spanGaps: true,
+              pointRadius: 2.5,
+              pointHoverRadius: 5,
+              pointHitRadius: 16,
+              pointBorderWidth: 0,
+              pointBackgroundColor: colors.lines.ethereum,
+            });
+          }
+
+          if (!datasets.length) {
+            destroyChart("crypto");
+            chartMeta.crypto = [];
+            togglePlaceholder("crypto", true);
+            return;
+          }
+
+          destroyChart("crypto");
+          chartInstances.crypto = new Chart(cryptoCanvas.getContext("2d"), {
+            type: "line",
+            data: { labels, datasets },
+            options,
+          });
+          togglePlaceholder("crypto", false);
+          setErrorMessage("crypto", "");
+        };
+
+        const renderWeatherChart = (entries) => {
+          if (!Array.isArray(entries) || entries.length === 0) {
+            destroyChart("weather");
+            chartMeta.weather = [];
+            togglePlaceholder("weather", true);
+            return;
+          }
+
+          const parsed = entries
+            .map((entry) => {
+              const timestamp = entry?.timestamp;
+              const date = timestamp ? new Date(timestamp) : null;
+              const tempValue = Number(entry?.temperature);
+              if (!date || Number.isNaN(date.getTime()) || !Number.isFinite(tempValue)) {
+                return null;
+              }
+              return { date, temperature: tempValue };
+            })
+            .filter(Boolean);
+
+          if (!parsed.length) {
+            destroyChart("weather");
+            chartMeta.weather = [];
+            togglePlaceholder("weather", true);
+            return;
+          }
+
+          chartMeta.weather = parsed;
+          const labels = parsed.map((item) => formatLabel(item.date));
+          const colors = getThemeColors();
+          const options = createBaseLineOptions(colors);
+          options.scales.y.ticks.callback = (value) => formatTemperatureTick(value);
+          options.plugins.tooltip.callbacks = {
+            title: (items) => {
+              const index = items[0]?.dataIndex ?? 0;
+              const meta = chartMeta.weather[index];
+              return formatTooltipLabel(meta?.date);
+            },
+            label: (context) => {
+              const value = context.parsed.y;
+              return `Temperature: ${formatTemperatureValue(value)}`;
+            },
+          };
+
+          const dataset = {
+            label: "Temperature (\u00B0F)",
+            data: parsed.map((item) => item.temperature),
+            borderColor: colors.lines.temperature,
+            backgroundColor: colors.fills.temperature,
+            tension: 0.35,
+            fill: true,
+            spanGaps: true,
+            pointRadius: 2.5,
+            pointHoverRadius: 5,
+            pointHitRadius: 16,
+            pointBorderWidth: 0,
+            pointBackgroundColor: colors.lines.temperature,
+          };
+
+          destroyChart("weather");
+          chartInstances.weather = new Chart(weatherCanvas.getContext("2d"), {
+            type: "line",
+            data: { labels, datasets: [dataset] },
+            options,
+          });
+          togglePlaceholder("weather", false);
+          setErrorMessage("weather", "");
+        };
+
+        const loadCharts = async () => {
+          setRefreshState(true);
+          setErrorMessage("crypto", "");
+          setErrorMessage("weather", "");
+          try {
+            const [cryptoResult, weatherResult] = await Promise.allSettled([
+              fetchJson(ENDPOINTS.cryptoHistory),
+              fetchJson(ENDPOINTS.weatherHistory),
+            ]);
+            if (cryptoResult.status === "fulfilled" && cryptoResult.value) {
+              renderCryptoChart(cryptoResult.value.data || []);
+            } else {
+              destroyChart("crypto");
+              chartMeta.crypto = [];
+              togglePlaceholder(
+                "crypto",
+                true,
+                "Unable to load crypto history right now."
+              );
+              setErrorMessage(
+                "crypto",
+                "Unable to load crypto history. Please try again."
+              );
+              if (cryptoResult.status === "rejected") {
+                console.warn("Crypto history request failed:", cryptoResult.reason);
+              }
+            }
+            if (weatherResult.status === "fulfilled" && weatherResult.value) {
+              renderWeatherChart(weatherResult.value.data || []);
+            } else {
+              destroyChart("weather");
+              chartMeta.weather = [];
+              togglePlaceholder(
+                "weather",
+                true,
+                "Unable to load weather history right now."
+              );
+              setErrorMessage(
+                "weather",
+                "Unable to load weather history. Please try again."
+              );
+              if (weatherResult.status === "rejected") {
+                console.warn("Weather history request failed:", weatherResult.reason);
+              }
+            }
+          } catch (error) {
+            console.error("Unexpected error while loading insights data:", error);
+            destroyChart("crypto");
+            destroyChart("weather");
+            togglePlaceholder(
+              "crypto",
+              true,
+              "Unable to load crypto history right now."
+            );
+            togglePlaceholder(
+              "weather",
+              true,
+              "Unable to load weather history right now."
+            );
+            setErrorMessage(
+              "crypto",
+              "Unexpected error while loading chart data."
+            );
+            setErrorMessage(
+              "weather",
+              "Unexpected error while loading chart data."
+            );
+          } finally {
+            updateChartTheme();
+            setRefreshState(false);
+          }
+        };
+
+        if (refreshButton) {
+          refreshButton.addEventListener("click", () => {
+            loadCharts();
+          });
+        }
+
+        loadCharts();
       });
     </script>
   </body>
 </html>
+
