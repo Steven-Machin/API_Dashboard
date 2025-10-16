@@ -604,6 +604,26 @@
                 data-chart-error="crypto"
                 role="status"
               ></div>
+              <div class="d-flex flex-wrap gap-2 mt-3">
+                <button
+                  type="button"
+                  class="btn btn-sm btn-outline-secondary"
+                  data-export-chart="crypto"
+                  data-export-format="png"
+                  data-export-title="Crypto Trends"
+                >
+                  Download PNG
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-sm btn-outline-secondary"
+                  data-export-chart="crypto"
+                  data-export-format="pdf"
+                  data-export-title="Crypto Trends"
+                >
+                  Download PDF
+                </button>
+              </div>
             </div>
           </section>
         </div>
@@ -635,6 +655,26 @@
                 data-chart-error="weather"
                 role="status"
               ></div>
+              <div class="d-flex flex-wrap gap-2 mt-3">
+                <button
+                  type="button"
+                  class="btn btn-sm btn-outline-secondary"
+                  data-export-chart="weather"
+                  data-export-format="png"
+                  data-export-title="Weather Trends"
+                >
+                  Download PNG
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-sm btn-outline-secondary"
+                  data-export-chart="weather"
+                  data-export-format="pdf"
+                  data-export-title="Weather Trends"
+                >
+                  Download PDF
+                </button>
+              </div>
             </div>
           </section>
         </div>
@@ -645,6 +685,7 @@
       <small class="mb-0">API Dashboard &copy; 2025 &ndash; Built by Steven Machin</small>
     </footer>
 
+    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
     <script>
       document.addEventListener("DOMContentLoaded", () => {
@@ -697,6 +738,7 @@
           ethChange: metricElements.ethChange?.closest(".metric-badge") || null,
           avgTemp: metricElements.avgTemp?.closest(".metric-badge") || null,
         };
+        const exportButtons = document.querySelectorAll("[data-export-chart]");
 
         const currencyFormatter = (() => {
           try {
@@ -837,7 +879,7 @@
           if (numericValue !== null) {
             if (type === "percent") {
               const arrow =
-                numericValue > 0 ? "↑" : numericValue < 0 ? "↓" : "→";
+                numericValue > 0 ? "\u2191" : numericValue < 0 ? "\u2193" : "\u2192";
               const formatted = percentFormatter.format(Math.abs(numericValue));
               displayText = `${arrow} ${formatted} %`;
               if (numericValue > 0) {
@@ -900,6 +942,126 @@
             "title",
             `${sampleSize} ${noun} in the last ${windowLabel}.`
           );
+        };
+
+        // Utility helpers for chart export.
+        const getChartInstance = (type) => {
+          const chart = chartInstances[type];
+          if (!chart) {
+            console.warn(`No chart instance is available for type "${type}".`);
+            if (typeof window.alert === "function") {
+              window.alert("Chart is not available yet. Please refresh data first.");
+            }
+            return null;
+          }
+          return chart;
+        };
+
+        const buildFileNameBase = (title) => {
+          const safeTitle = (title || "chart")
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, "-")
+            .replace(/^-|-$/g, "");
+          const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+          return `${safeTitle || "chart"}-${timestamp}`;
+        };
+
+        const getSummaryLines = (type) => {
+          if (type === "crypto") {
+            return [
+              `Bitcoin: ${metricElements.btcChange?.textContent || "--"}`,
+              `Ethereum: ${metricElements.ethChange?.textContent || "--"}`,
+            ];
+          }
+          if (type === "weather") {
+            return [
+              `Average temperature: ${metricElements.avgTemp?.textContent || "--"}`,
+            ];
+          }
+          return [];
+        };
+
+        const exportAsPng = (chart, title) => {
+          try {
+            const dataUrl = chart.toBase64Image("image/png", 1);
+            const link = document.createElement("a");
+            link.href = dataUrl;
+            link.download = `${buildFileNameBase(title)}.png`;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+          } catch (error) {
+            console.error("Unable to export chart as PNG", error);
+          }
+        };
+
+        const exportAsPdf = (chart, title, summaryLines) => {
+          const jsPDFNamespace = window.jspdf;
+          if (!jsPDFNamespace || !jsPDFNamespace.jsPDF) {
+            console.warn("jsPDF is not available; skipping PDF export.");
+            return;
+          }
+          try {
+            const { jsPDF } = jsPDFNamespace;
+            const canvas = chart.canvas;
+            const width = canvas?.offsetWidth || chart.width || 800;
+            const height = canvas?.offsetHeight || chart.height || 400;
+            const margin = 40;
+            const metadataHeight = 80 + summaryLines.length * 18;
+            const pdf = new jsPDF({
+              orientation: "landscape",
+              unit: "px",
+              format: [width + margin * 2, height + margin * 2 + metadataHeight],
+            });
+
+            const now = new Date();
+            pdf.setFontSize(18);
+            pdf.text(title || "Chart Export", margin, margin + 10);
+            pdf.setFontSize(11);
+            pdf.text(`Generated: ${now.toLocaleString()}`, margin, margin + 30);
+            let cursorY = margin + 50;
+            pdf.setFontSize(12);
+            summaryLines.forEach((line) => {
+              pdf.text(line, margin, cursorY);
+              cursorY += 18;
+            });
+
+            const image = chart.toBase64Image("image/png", 1);
+            pdf.addImage(
+              image,
+              "PNG",
+              margin,
+              cursorY,
+              width,
+              height,
+              undefined,
+              "FAST"
+            );
+            pdf.save(`${buildFileNameBase(title)}.pdf`);
+          } catch (error) {
+            console.error("Unable to export chart as PDF", error);
+          }
+        };
+
+        const handleChartExport = (type, format, title, triggerButton) => {
+          const chart = getChartInstance(type);
+          if (!chart) return;
+          const summaryLines = getSummaryLines(type);
+          if (triggerButton) {
+            triggerButton.disabled = true;
+          }
+          if (format === "png") {
+            exportAsPng(chart, title);
+          } else if (format === "pdf") {
+            exportAsPdf(chart, title, summaryLines);
+          } else {
+            console.warn(`Unsupported export format "${format}".`);
+          }
+          if (triggerButton) {
+            window.setTimeout(() => {
+              triggerButton.disabled = false;
+            }, 200);
+          }
         };
 
         const destroyChart = (type) => {
@@ -1101,6 +1263,16 @@
         const initialMetrics = window.__INSIGHTS_INITIAL_METRICS__ || {};
         renderCryptoMetrics(initialMetrics.crypto || {});
         renderWeatherMetrics(initialMetrics.weather || {});
+        // Wire up download buttons for PNG/PDF exports.
+        exportButtons.forEach((button) => {
+          button.addEventListener("click", () => {
+            const chartType = button.dataset.exportChart;
+            if (!chartType) return;
+            const format = button.dataset.exportFormat || "png";
+            const title = button.dataset.exportTitle || "Chart";
+            handleChartExport(chartType, format, title, button);
+          });
+        });
 
         const renderCryptoChart = (entries) => {
           if (!Array.isArray(entries) || entries.length === 0) {
@@ -1365,4 +1537,5 @@
     </script>
   </body>
 </html>
+
 
