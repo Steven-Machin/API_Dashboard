@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from typing import Optional
 
 from flask_login import UserMixin
@@ -61,3 +62,47 @@ class UserSettings(db.Model):
             "default_city": self.default_city,
             "refresh_interval": self.refresh_interval,
         }
+
+
+class CryptoHistory(db.Model):
+    """Persist a point-in-time snapshot of crypto prices for trend tracking."""
+
+    __tablename__ = "crypto_history"
+
+    id = db.Column(db.Integer, primary_key=True)
+    timestamp = db.Column(
+        db.DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc),
+        index=True,
+    )
+    bitcoin_price = db.Column(db.Float, nullable=False)
+    ethereum_price = db.Column(db.Float, nullable=False)
+
+    def __repr__(self) -> str:
+        return (
+            f"<CryptoHistory id={self.id} timestamp={self.timestamp.isoformat()} "
+            f"btc={self.bitcoin_price} eth={self.ethereum_price}>"
+        )
+
+
+class WeatherHistory(db.Model):
+    """Capture weather readings so the dashboard can display recent history."""
+
+    __tablename__ = "weather_history"
+
+    id = db.Column(db.Integer, primary_key=True)
+    timestamp = db.Column(
+        db.DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc),
+        index=True,
+    )
+    temperature = db.Column(db.Float, nullable=False)
+    condition = db.Column(db.String(128), nullable=False)
+
+    def __repr__(self) -> str:
+        return (
+            f"<WeatherHistory id={self.id} timestamp={self.timestamp.isoformat()} "
+            f"temp={self.temperature} condition={self.condition!r}>"
+        )

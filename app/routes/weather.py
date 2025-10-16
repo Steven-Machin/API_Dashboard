@@ -7,6 +7,7 @@ from flask_login import login_required
 
 from app.services.settings_service import get_user_settings
 from app.services.weather_service import get_weather_forecast
+from app.services.history_service import save_weather_data
 
 weather_bp = Blueprint("weather", __name__)
 
@@ -23,12 +24,20 @@ def weather():
     weather_list = data.get("weather") if isinstance(data, dict) else []
     primary = weather_list[0] if weather_list else {}
 
+    temperature = main.get("temp")
+    condition = primary.get("description") or primary.get("main", "")
+
     payload = {
         "city": data.get("name") if isinstance(data, dict) else None,
-        "temperature": main.get("temp"),
-        "condition": (primary.get("description") or primary.get("main", "")),
+        "temperature": temperature,
+        "condition": condition,
         "humidity": main.get("humidity"),
         "wind_speed": wind.get("speed"),
         "last_updated": datetime.now(timezone.utc).isoformat(),
     }
+
+    # Record the weather snapshot when the API (or fallback) returns the essentials.
+    if isinstance(temperature, (int, float)) and condition:
+        save_weather_data(temperature, condition)
+
     return jsonify(payload)
