@@ -74,6 +74,12 @@
         <div class="ms-auto d-flex align-items-center gap-3">
           <span class="navbar-version">{{ app_version }}</span>
           <a
+            href="{{ url_for('main.insights') }}"
+            class="btn btn-sm btn-outline-light"
+          >
+            Insights
+          </a>
+          <a
             href="{{ url_for('main.index') }}"
             class="btn btn-sm btn-outline-light"
           >

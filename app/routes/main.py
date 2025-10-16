@@ -105,6 +105,13 @@ def settings():
     )
 
 
+@main_bp.route("/insights")
+@login_required
+def insights():
+    """Render the insights dashboard with trend placeholders."""
+    return render_template("insights.html")
+
+
 def _coerce_bool(value: Any) -> bool:
     if isinstance(value, bool):
         return value

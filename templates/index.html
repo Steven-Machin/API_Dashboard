@@ -181,7 +181,8 @@
       }
 
       .navbar-theme .theme-nav-btn:hover,
-      .navbar-theme .theme-nav-btn:focus-visible {
+      .navbar-theme .theme-nav-btn:focus-visible,
+      .navbar-theme .theme-nav-btn.active {
         background: var(--navbar-button-bg-hover);
         color: var(--navbar-brand);
         transform: translateY(-1px);
@@ -570,45 +571,51 @@
           <a class="navbar-brand fw-semibold mb-0" href="{{ url_for('main.index') }}">API Dashboard</a>
           <div class="d-flex align-items-center gap-3 ms-auto">
             <span class="navbar-version">{{ app_version }}</span>
+            <a
+              class="btn btn-sm theme-nav-btn{% if request.endpoint == 'main.insights' %} active{% endif %}"
+              href="{{ url_for('main.insights') }}"
+            >
+              Insights
+            </a>
             {% if current_user.is_authenticated %}
               <div class="nav-muted small me-2 d-none d-md-flex align-items-center gap-2">
                 <i class="fa-solid fa-user-circle"></i>
                 <span>{{ current_user.email }}</span>
               </div>
-          {% endif %}
-          <a
-            class="btn btn-sm theme-nav-btn"
-            href="{{ url_for('main.settings') }}"
-          >
-            Settings
-          </a>
-          <button
-            class="theme-toggle-btn"
-            type="button"
-            id="theme-toggle"
-            aria-label="Switch to dark mode"
-            aria-pressed="false"
-            title="Switch to dark mode"
-          >
-            <i class="fa-solid fa-moon" data-theme-icon="dark" aria-hidden="true"></i>
-            <i class="fa-solid fa-sun" data-theme-icon="light" aria-hidden="true"></i>
-          </button>
-          <div class="form-check form-switch nav-muted small mb-0">
-            <input
-              class="form-check-input"
-              type="checkbox"
-              role="switch"
-              id="auto-refresh-toggle"
+            {% endif %}
+            <a
+              class="btn btn-sm theme-nav-btn"
+              href="{{ url_for('main.settings') }}"
             >
-            <label class="form-check-label ms-2" for="auto-refresh-toggle">
-              Auto refresh
-            </label>
-          </div>
-          {% if current_user.is_authenticated %}
-            <a class="btn btn-sm theme-nav-btn" href="{{ url_for('auth.logout') }}">
-              Logout
+              Settings
             </a>
-          {% endif %}
+            <button
+              class="theme-toggle-btn"
+              type="button"
+              id="theme-toggle"
+              aria-label="Switch to dark mode"
+              aria-pressed="false"
+              title="Switch to dark mode"
+            >
+              <i class="fa-solid fa-moon" data-theme-icon="dark" aria-hidden="true"></i>
+              <i class="fa-solid fa-sun" data-theme-icon="light" aria-hidden="true"></i>
+            </button>
+            <div class="form-check form-switch nav-muted small mb-0">
+              <input
+                class="form-check-input"
+                type="checkbox"
+                role="switch"
+                id="auto-refresh-toggle"
+              >
+              <label class="form-check-label ms-2" for="auto-refresh-toggle">
+                Auto refresh
+              </label>
+            </div>
+            {% if current_user.is_authenticated %}
+              <a class="btn btn-sm theme-nav-btn" href="{{ url_for('auth.logout') }}">
+                Logout
+              </a>
+            {% endif %}
         </div>
       </div>
     </nav>
