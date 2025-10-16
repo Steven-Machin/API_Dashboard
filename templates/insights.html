@@ -258,6 +258,59 @@
         max-width: 680px;
       }
 
+      .insights-metrics-row {
+        margin-bottom: 2rem;
+      }
+
+      .metric-card {
+        background: var(--surface-card);
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        border-radius: 16px;
+        box-shadow: 0 16px 30px -20px rgba(15, 23, 42, 0.45);
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+        padding: 1.1rem 1.35rem;
+        transition: transform 0.25s ease, box-shadow 0.25s ease;
+      }
+
+      .metric-card:hover,
+      .metric-card:focus-within {
+        box-shadow: 0 22px 40px -22px rgba(15, 23, 42, 0.5);
+        transform: translateY(-2px);
+      }
+
+      .metric-label {
+        font-size: 0.85rem;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: var(--text-muted);
+      }
+
+      .metric-value {
+        font-size: clamp(1.35rem, 2.5vw, 1.75rem);
+        font-weight: 700;
+        color: var(--text-primary);
+      }
+
+      .metric-value.positive {
+        color: #16a34a;
+      }
+
+      .metric-value.negative {
+        color: #dc2626;
+      }
+
+      .metric-value.neutral {
+        color: var(--text-primary);
+      }
+
+      .metric-footnote {
+        color: var(--text-muted);
+        font-size: 0.75rem;
+      }
+
       .charts-toolbar {
         display: flex;
         justify-content: center;
@@ -340,6 +393,10 @@
         }
       }
     </style>
+    {% set _initial_metrics = insights_metrics or {} %}
+    <script>
+      window.__INSIGHTS_INITIAL_METRICS__ = {{ _initial_metrics|tojson }};
+    </script>
   </head>
   <body class="d-flex flex-column min-vh-100">
     <nav class="navbar navbar-expand-lg shadow-sm navbar-theme">
@@ -399,6 +456,99 @@
           Explore aggregated data snapshots for crypto and weather to uncover trends over time.
         </p>
       </header>
+
+      {% set metrics = insights_metrics or {} %}
+      {% set crypto_metrics = metrics.get("crypto") or {} %}
+      {% set weather_metrics = metrics.get("weather") or {} %}
+      {% set btc_change = crypto_metrics.get("bitcoin_change_pct") %}
+      {% set eth_change = crypto_metrics.get("ethereum_change_pct") %}
+      {% set crypto_sample = crypto_metrics.get("sample_size") %}
+      {% set weather_avg = weather_metrics.get("average_temperature") %}
+      {% set weather_sample = weather_metrics.get("sample_size") %}
+      {% set btc_text = "--" %}
+      {% set btc_class = "neutral" %}
+      {% if btc_change is not none %}
+        {% set btc_text = "%+.2f%%" % btc_change %}
+        {% if btc_change > 0 %}
+          {% set btc_class = "positive" %}
+        {% elif btc_change < 0 %}
+          {% set btc_class = "negative" %}
+        {% endif %}
+      {% endif %}
+      {% set eth_text = "--" %}
+      {% set eth_class = "neutral" %}
+      {% if eth_change is not none %}
+        {% set eth_text = "%+.2f%%" % eth_change %}
+        {% if eth_change > 0 %}
+          {% set eth_class = "positive" %}
+        {% elif eth_change < 0 %}
+          {% set eth_class = "negative" %}
+        {% endif %}
+      {% endif %}
+      {% set crypto_note = "No data in the last 24 hours yet." %}
+      {% if crypto_sample is not none and crypto_sample > 1 %}
+        {% set crypto_note = "Based on %d data points in the last 24 hours." % crypto_sample %}
+      {% elif crypto_sample == 1 %}
+        {% set crypto_note = "Only one data point captured in the last 24 hours." %}
+      {% endif %}
+      {% set avg_temp_text = "--" %}
+      {% if weather_avg is not none %}
+        {% set avg_temp_text = "%.1f°" % weather_avg %}
+      {% endif %}
+      {% set weather_note = "No data captured in the last 7 days." %}
+      {% if weather_sample is not none and weather_sample > 1 %}
+        {% set weather_note = "Based on %d readings in the last 7 days." % weather_sample %}
+      {% elif weather_sample == 1 %}
+        {% set weather_note = "Based on 1 reading in the last 7 days." %}
+      {% endif %}
+
+      <div class="row g-3 insights-metrics-row" aria-live="polite">
+        <div class="col-12 col-md-4">
+          <div class="metric-card" tabindex="0">
+            <div class="metric-label">Bitcoin 24h Change</div>
+            <div
+              class="metric-value {{ btc_class }}"
+              data-metric="btc-change"
+              data-metric-label="Bitcoin 24 hour change"
+              data-sample-size="{{ crypto_sample or '' }}"
+            >
+              {{ btc_text }}
+            </div>
+            <div class="metric-footnote" data-metric-footnote="crypto">
+              {{ crypto_note }}
+            </div>
+          </div>
+        </div>
+        <div class="col-12 col-md-4">
+          <div class="metric-card" tabindex="0">
+            <div class="metric-label">Ethereum 24h Change</div>
+            <div
+              class="metric-value {{ eth_class }}"
+              data-metric="eth-change"
+              data-metric-label="Ethereum 24 hour change"
+              data-sample-size="{{ crypto_sample or '' }}"
+            >
+              {{ eth_text }}
+            </div>
+          </div>
+        </div>
+        <div class="col-12 col-md-4">
+          <div class="metric-card" tabindex="0">
+            <div class="metric-label">Avg Temp (7 days)</div>
+            <div
+              class="metric-value neutral"
+              data-metric="avg-temp"
+              data-metric-label="Average temperature across seven days"
+              data-sample-size="{{ weather_sample or '' }}"
+            >
+              {{ avg_temp_text }}
+            </div>
+            <div class="metric-footnote" data-metric-footnote="weather">
+              {{ weather_note }}
+            </div>
+          </div>
+        </div>
+      </div>
 
       <div class="charts-toolbar">
         <button
@@ -523,6 +673,21 @@
         const chartInstances = { crypto: null, weather: null };
         const chartMeta = { crypto: [], weather: [] };
 
+        const metricElements = {
+          btcChange: document.querySelector('[data-metric="btc-change"]'),
+          ethChange: document.querySelector('[data-metric="eth-change"]'),
+          avgTemp: document.querySelector('[data-metric="avg-temp"]'),
+        };
+        const metricFootnotes = {
+          crypto: document.querySelector('[data-metric-footnote="crypto"]'),
+          weather: document.querySelector('[data-metric-footnote="weather"]'),
+        };
+        const metricCards = {
+          btcChange: metricElements.btcChange?.closest(".metric-card") || null,
+          ethChange: metricElements.ethChange?.closest(".metric-card") || null,
+          avgTemp: metricElements.avgTemp?.closest(".metric-card") || null,
+        };
+
         const currencyFormatter = (() => {
           try {
             return new Intl.NumberFormat(undefined, {
@@ -539,6 +704,17 @@
           if (value === null || Number.isNaN(value)) return "N/A";
           return currencyFormatter.format(Number(value));
         };
+
+        const percentFormatter = new Intl.NumberFormat(undefined, {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+          signDisplay: "exceptZero",
+        });
+
+        const temperatureFormatter = new Intl.NumberFormat(undefined, {
+          minimumFractionDigits: 1,
+          maximumFractionDigits: 1,
+        });
 
         const formatTemperatureTick = (value) =>
           `${Math.round(Number(value))}\u00B0`;
@@ -631,6 +807,112 @@
           refreshButton.disabled = isLoading;
           refreshButton.classList.toggle("is-loading", isLoading);
           refreshButton.setAttribute("aria-busy", String(isLoading));
+        };
+
+        const setMetricValue = (
+          element,
+          value,
+          { type = "number", label, sampleSize } = {}
+        ) => {
+          if (!element) return;
+          const metricLabel = label || element.dataset.metricLabel || "Metric value";
+          const numericValue =
+            typeof value === "number" && Number.isFinite(value) ? value : null;
+
+          element.classList.remove("positive", "negative", "neutral");
+
+          let displayText = "--";
+          let appliedClass = "neutral";
+          let spokenValue = "unavailable";
+
+          if (numericValue !== null) {
+            if (type === "percent") {
+              displayText = `${percentFormatter.format(numericValue)}%`;
+              appliedClass =
+                numericValue > 0
+                  ? "positive"
+                  : numericValue < 0
+                    ? "negative"
+                    : "neutral";
+              spokenValue = `${percentFormatter.format(numericValue)} percent`;
+            } else if (type === "temperature") {
+              displayText = `${temperatureFormatter.format(numericValue)}\u00B0`;
+              spokenValue = `${temperatureFormatter.format(numericValue)} degrees`;
+            } else {
+              displayText = String(numericValue);
+              spokenValue = displayText;
+            }
+            element.setAttribute("aria-label", `${metricLabel}: ${spokenValue}`);
+          } else {
+            element.setAttribute("aria-label", `${metricLabel} unavailable`);
+          }
+
+          element.textContent = displayText;
+          element.classList.add(appliedClass);
+
+          if (typeof sampleSize === "number" && Number.isFinite(sampleSize)) {
+            element.dataset.sampleSize = String(sampleSize);
+          } else {
+            element.dataset.sampleSize = "";
+          }
+        };
+
+        const setFootnote = (element, text) => {
+          if (!element) return;
+          if (text) {
+            element.textContent = text;
+            element.classList.remove("d-none");
+          } else {
+            element.textContent = "";
+            element.classList.add("d-none");
+          }
+        };
+
+        const buildSampleFootnote = (
+          sampleSize,
+          {
+            windowLabel,
+            needsTwoPoints = false,
+            singularNoun = "data point",
+            pluralNoun = "data points",
+            emptyMessage,
+          }
+        ) => {
+          if (!Number.isFinite(sampleSize) || sampleSize <= 0) {
+            return (
+              emptyMessage || `No data in the last ${windowLabel}.`
+            );
+          }
+          if (needsTwoPoints && sampleSize < 2) {
+            return `Only one ${singularNoun} captured in the last ${windowLabel}.`;
+          }
+          const noun = sampleSize === 1 ? singularNoun : pluralNoun;
+          return `Based on ${sampleSize} ${noun} in the last ${windowLabel}.`;
+        };
+
+        const updateCardTitle = (
+          card,
+          sampleSize,
+          windowLabel,
+          { needsTwoPoints = false, singularNoun = "data point", pluralNoun = "data points" } = {}
+        ) => {
+          if (!card) return;
+          if (!Number.isFinite(sampleSize) || sampleSize <= 0) {
+            card.removeAttribute("title");
+            return;
+          }
+          if (needsTwoPoints && sampleSize < 2) {
+            card.setAttribute(
+              "title",
+              `Only one ${singularNoun} captured in the last ${windowLabel}.`
+            );
+            return;
+          }
+          const noun = sampleSize === 1 ? singularNoun : pluralNoun;
+          card.setAttribute(
+            "title",
+            `${sampleSize} ${noun} in the last ${windowLabel}.`
+          );
         };
 
         const destroyChart = (type) => {
@@ -770,6 +1052,83 @@
           }
           return response.json();
         };
+
+        const renderCryptoMetrics = (metrics) => {
+          const sampleSizeRaw = metrics?.sample_size;
+          const sampleSize = Number.isFinite(sampleSizeRaw)
+            ? Number(sampleSizeRaw)
+            : null;
+
+          const bitcoinChange = Number.isFinite(metrics?.bitcoin_change_pct)
+            ? Number(metrics.bitcoin_change_pct)
+            : null;
+          const ethereumChange = Number.isFinite(metrics?.ethereum_change_pct)
+            ? Number(metrics.ethereum_change_pct)
+            : null;
+
+          setMetricValue(metricElements.btcChange, bitcoinChange, {
+            type: "percent",
+            label: metricElements.btcChange?.dataset.metricLabel,
+            sampleSize,
+          });
+          setMetricValue(metricElements.ethChange, ethereumChange, {
+            type: "percent",
+            label: metricElements.ethChange?.dataset.metricLabel,
+            sampleSize,
+          });
+
+          const normalizedSample = Number.isFinite(sampleSize) ? sampleSize : 0;
+          const footnoteText = buildSampleFootnote(normalizedSample, {
+            windowLabel: "24 hours",
+            needsTwoPoints: true,
+            emptyMessage: "No data in the last 24 hours yet.",
+          });
+          setFootnote(metricFootnotes.crypto, footnoteText);
+
+          updateCardTitle(metricCards.btcChange, normalizedSample, "24 hours", {
+            needsTwoPoints: true,
+          });
+          updateCardTitle(metricCards.ethChange, normalizedSample, "24 hours", {
+            needsTwoPoints: true,
+          });
+        };
+
+        const renderWeatherMetrics = (metrics) => {
+          const sampleSizeRaw = metrics?.sample_size;
+          const sampleSize = Number.isFinite(sampleSizeRaw)
+            ? Number(sampleSizeRaw)
+            : null;
+
+          const averageTemperature = Number.isFinite(
+            metrics?.average_temperature
+          )
+            ? Number(metrics.average_temperature)
+            : null;
+
+          setMetricValue(metricElements.avgTemp, averageTemperature, {
+            type: "temperature",
+            label: metricElements.avgTemp?.dataset.metricLabel,
+            sampleSize,
+          });
+
+          const normalizedSample = Number.isFinite(sampleSize) ? sampleSize : 0;
+          const footnoteText = buildSampleFootnote(normalizedSample, {
+            windowLabel: "7 days",
+            singularNoun: "reading",
+            pluralNoun: "readings",
+            emptyMessage: "No data captured in the last 7 days.",
+          });
+          setFootnote(metricFootnotes.weather, footnoteText);
+
+          updateCardTitle(metricCards.avgTemp, normalizedSample, "7 days", {
+            singularNoun: "reading",
+            pluralNoun: "readings",
+          });
+        };
+
+        const initialMetrics = window.__INSIGHTS_INITIAL_METRICS__ || {};
+        renderCryptoMetrics(initialMetrics.crypto || {});
+        renderWeatherMetrics(initialMetrics.weather || {});
 
         const renderCryptoChart = (entries) => {
           if (!Array.isArray(entries) || entries.length === 0) {
@@ -955,6 +1314,7 @@
             ]);
             if (cryptoResult.status === "fulfilled" && cryptoResult.value) {
               renderCryptoChart(cryptoResult.value.data || []);
+              renderCryptoMetrics(cryptoResult.value.metrics || {});
             } else {
               destroyChart("crypto");
               chartMeta.crypto = [];
@@ -967,12 +1327,14 @@
                 "crypto",
                 "Unable to load crypto history. Please try again."
               );
+              renderCryptoMetrics({});
               if (cryptoResult.status === "rejected") {
                 console.warn("Crypto history request failed:", cryptoResult.reason);
               }
             }
             if (weatherResult.status === "fulfilled" && weatherResult.value) {
               renderWeatherChart(weatherResult.value.data || []);
+              renderWeatherMetrics(weatherResult.value.metrics || {});
             } else {
               destroyChart("weather");
               chartMeta.weather = [];
@@ -985,6 +1347,7 @@
                 "weather",
                 "Unable to load weather history. Please try again."
               );
+              renderWeatherMetrics({});
               if (weatherResult.status === "rejected") {
                 console.warn("Weather history request failed:", weatherResult.reason);
               }
@@ -1011,6 +1374,8 @@
               "weather",
               "Unexpected error while loading chart data."
             );
+            renderCryptoMetrics({});
+            renderWeatherMetrics({});
           } finally {
             updateChartTheme();
             setRefreshState(false);

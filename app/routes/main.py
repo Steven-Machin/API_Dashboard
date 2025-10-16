@@ -22,7 +22,12 @@ from app.services.crypto_service import get_crypto_prices
 from app.services.news_service import get_headlines
 from app.services.settings_service import get_user_settings
 from app.services.weather_service import get_weather_forecast
-from app.services.history_service import get_crypto_history, get_weather_history
+from app.services.history_service import (
+    calculate_crypto_change,
+    calculate_weather_average,
+    get_crypto_history,
+    get_weather_history,
+)
 
 main_bp = Blueprint("main", __name__)
 
@@ -110,7 +115,11 @@ def settings():
 @login_required
 def insights():
     """Render the insights dashboard with trend placeholders."""
-    return render_template("insights.html")
+    metrics = {
+        "crypto": calculate_crypto_change(),
+        "weather": calculate_weather_average(),
+    }
+    return render_template("insights.html", insights_metrics=metrics)
 
 
 @main_bp.route("/api/crypto_history")
@@ -118,7 +127,8 @@ def insights():
 def api_crypto_history():
     """Expose the recent crypto history entries for chart rendering."""
     payload = get_crypto_history()
-    return jsonify({"data": payload, "count": len(payload)})
+    metrics = calculate_crypto_change()
+    return jsonify({"data": payload, "count": len(payload), "metrics": metrics})
 
 
 @main_bp.route("/api/weather_history")
@@ -126,7 +136,8 @@ def api_crypto_history():
 def api_weather_history():
     """Expose the recent weather history entries for chart rendering."""
     payload = get_weather_history()
-    return jsonify({"data": payload, "count": len(payload)})
+    metrics = calculate_weather_average()
+    return jsonify({"data": payload, "count": len(payload), "metrics": metrics})
 
 
 def _coerce_bool(value: Any) -> bool:
