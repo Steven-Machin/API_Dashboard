@@ -40,7 +40,11 @@ def _linear_regression_forecast(values: Sequence[float]) -> Optional[float]:
         return None
 
     x = np.arange(series.size, dtype=float)
-    slope, intercept = np.polyfit(x, series, 1)
+    # Fit a straight line (degree-1 polynomial) and extrapolate one step ahead.
+    try:
+        slope, intercept = np.polyfit(x, series, 1)
+    except (np.linalg.LinAlgError, ValueError):
+        return None
     forecast_value = slope * series.size + intercept
     return float(forecast_value)
 
@@ -294,6 +298,7 @@ def forecast_crypto_prices() -> Dict[str, float | str | None]:
 
     forecast_btc = _linear_regression_forecast(btc_values)
     forecast_eth = _linear_regression_forecast(eth_values)
+    # Re-use the spacing between historic points to project a timestamp.
     next_time = _estimate_next_timestamp(timestamps)
 
     return {

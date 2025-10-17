@@ -848,6 +848,12 @@
           date ? timestampFormatter.format(date) : "Unknown";
         const formatTooltipLabel = (date) =>
           date ? tooltipTimestampFormatter.format(date) : "Unknown";
+        const formatForecastTimestamp = (isoString) => {
+          if (!isoString) return "";
+          const date = new Date(isoString);
+          if (Number.isNaN(date.getTime())) return "";
+          return tooltipTimestampFormatter.format(date);
+        };
 
         const readCssVar = (name, fallback) => {
           const styles = getComputedStyle(document.documentElement);
@@ -1052,6 +1058,7 @@
           }
         };
 
+        // Present forecast values (currency or temperature) beneath each badge.
         const setForecastValue = (
           element,
           value,
@@ -1332,12 +1339,17 @@
           const ethForecast = Number.isFinite(ethForecastRaw)
             ? ethForecastRaw
             : null;
+          const forecastTimestamp = formatForecastTimestamp(
+            forecast?.next_timestamp
+          );
 
           setForecastValue(forecastElements.btcPrice, btcForecast, {
             type: "currency",
+            timestamp: forecastTimestamp,
           });
           setForecastValue(forecastElements.ethPrice, ethForecast, {
             type: "currency",
+            timestamp: forecastTimestamp,
           });
 
           updateCardTitle(metricCards.btcChange, sampleSize, "24 hours", {
@@ -1372,9 +1384,13 @@
           const tempForecast = Number.isFinite(tempForecastRaw)
             ? tempForecastRaw
             : null;
+          const forecastTimestamp = formatForecastTimestamp(
+            forecast?.next_timestamp
+          );
 
           setForecastValue(forecastElements.avgTemp, tempForecast, {
             type: "temperature",
+            timestamp: forecastTimestamp,
           });
 
           updateCardTitle(metricCards.avgTemp, sampleSize, "7 days", {
@@ -1540,6 +1556,7 @@
               }
               if (lastIndex !== -1) {
                 forecastData[extendedMeta.length - 1] = btcForecast;
+                // Overlay a dashed projection between the latest point and forecast.
                 datasets.push({
                   label: "Bitcoin Forecast",
                   data: forecastData,
@@ -1567,6 +1584,7 @@
               }
               if (lastIndex !== -1) {
                 forecastData[extendedMeta.length - 1] = ethForecast;
+                // Overlay a dashed projection between the latest point and forecast.
                 datasets.push({
                   label: "Ethereum Forecast",
                   data: forecastData,
@@ -1707,6 +1725,7 @@
             }
             if (lastIndex !== -1) {
               forecastData[extendedMeta.length - 1] = forecastTemp;
+              // Overlay a dashed projection between the latest point and forecast.
               datasets.push({
                 label: "Temperature Forecast",
                 data: forecastData,
