@@ -5,6 +5,8 @@ from datetime import datetime, timezone, timedelta
 from typing import Any, Dict, List, Optional
 import statistics
 
+import numpy as np
+
 from app.extensions import db
 from app.models import AnomalyLog, CryptoHistory, WeatherHistory
 
@@ -12,6 +14,8 @@ _ROLLING_WINDOW = 50
 _ANOMALY_LIMIT = 200
 _SIGMA_THRESHOLD = 2.0
 _MIN_SAMPLE = 3
+_FORECAST_MIN_POINTS = 10
+_FORECAST_MAX_POINTS = 20
 
 
 def _rolling_stats(values: Sequence[float]) -> Dict[str, Optional[float]]:
@@ -22,6 +26,50 @@ def _rolling_stats(values: Sequence[float]) -> Dict[str, Optional[float]]:
     mean = statistics.fmean(cleaned)
     std = statistics.pstdev(cleaned) if len(cleaned) >= 2 else 0.0
     return {"mean": mean, "std": std, "count": len(cleaned)}
+
+
+def _linear_regression_forecast(values: Sequence[float]) -> Optional[float]:
+    """Project the next value using a simple first-degree polynomial fit."""
+    numeric = [float(v) for v in values if isinstance(v, (int, float))]
+    if len(numeric) < _FORECAST_MIN_POINTS:
+        return None
+
+    window = min(len(numeric), _FORECAST_MAX_POINTS)
+    series = np.array(numeric[-window:], dtype=float)
+    if series.size < 2:
+        return None
+
+    x = np.arange(series.size, dtype=float)
+    slope, intercept = np.polyfit(x, series, 1)
+    forecast_value = slope * series.size + intercept
+    return float(forecast_value)
+
+
+def _estimate_next_timestamp(timestamps: Sequence[datetime]) -> Optional[datetime]:
+    cleaned = [ts for ts in timestamps if isinstance(ts, datetime)]
+    if not cleaned:
+        return None
+    if len(cleaned) == 1:
+        return cleaned[0] + timedelta(hours=1)
+
+    deltas = []
+    for idx in range(1, len(cleaned)):
+        current = cleaned[idx]
+        previous = cleaned[idx - 1]
+        delta = (current - previous).total_seconds()
+        if delta > 0:
+            deltas.append(delta)
+
+    if not deltas:
+        deltas = [
+            (cleaned[-1] - cleaned[0]).total_seconds()
+            / max(len(cleaned) - 1, 1)
+        ]
+
+    avg_seconds = float(np.mean(deltas)) if deltas else 0.0
+    if avg_seconds <= 0:
+        avg_seconds = 3600.0
+    return cleaned[-1] + timedelta(seconds=avg_seconds)
 
 
 def _log_anomaly(event_type: str, message: str) -> None:
@@ -197,6 +245,7 @@ def calculate_crypto_change(hours: int = 24) -> Dict[str, Any]:
     metrics["ethereum_change_pct"] = _percent_change(
         float(first.ethereum_price), float(last.ethereum_price)
     )
+    metrics["forecast"] = forecast_crypto_prices()
     return metrics
 
 
@@ -222,7 +271,61 @@ def calculate_weather_average(days: int = 7) -> Dict[str, Any]:
 
     total = sum(float(row.temperature) for row in rows)
     metrics["average_temperature"] = total / len(rows)
+    metrics["forecast"] = forecast_weather_temperature()
     return metrics
+
+
+def forecast_crypto_prices() -> Dict[str, float | str | None]:
+    """Return linear regression forecasts for the next crypto prices."""
+    rows: List[CryptoHistory] = (
+        CryptoHistory.query.order_by(
+            CryptoHistory.timestamp.desc(), CryptoHistory.id.desc()
+        )
+        .limit(_FORECAST_MAX_POINTS)
+        .all()
+    )
+    if len(rows) < _FORECAST_MIN_POINTS:
+        return {"bitcoin_price": None, "ethereum_price": None, "next_timestamp": None}
+
+    ordered = list(reversed(rows))
+    timestamps = [row.timestamp for row in ordered]
+    btc_values = [float(row.bitcoin_price) for row in ordered]
+    eth_values = [float(row.ethereum_price) for row in ordered]
+
+    forecast_btc = _linear_regression_forecast(btc_values)
+    forecast_eth = _linear_regression_forecast(eth_values)
+    next_time = _estimate_next_timestamp(timestamps)
+
+    return {
+        "bitcoin_price": forecast_btc,
+        "ethereum_price": forecast_eth,
+        "next_timestamp": next_time.isoformat() if next_time else None,
+    }
+
+
+def forecast_weather_temperature() -> Dict[str, float | str | None]:
+    """Return the projected average temperature for the next interval."""
+    rows: List[WeatherHistory] = (
+        WeatherHistory.query.order_by(
+            WeatherHistory.timestamp.desc(), WeatherHistory.id.desc()
+        )
+        .limit(_FORECAST_MAX_POINTS)
+        .all()
+    )
+    if len(rows) < _FORECAST_MIN_POINTS:
+        return {"average_temperature": None, "next_timestamp": None}
+
+    ordered = list(reversed(rows))
+    timestamps = [row.timestamp for row in ordered]
+    temps = [float(row.temperature) for row in ordered]
+
+    forecast_temp = _linear_regression_forecast(temps)
+    next_time = _estimate_next_timestamp(timestamps)
+
+    return {
+        "average_temperature": forecast_temp,
+        "next_timestamp": next_time.isoformat() if next_time else None,
+    }
 
 
 def _detect_crypto_anomalies(

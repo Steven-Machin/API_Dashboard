@@ -49,5 +49,6 @@ The app exposes JSON endpoints at `/crypto`, `/weather`, and `/news` and a dashb
 
 - When API keys are not provided or network access fails, each service supplies placeholder data so the dashboard remains useful offline.
 - A daily background job aggregates 24-hour crypto performance, average temperature, and the latest headlines, then pushes the summary to the configured Discord webhook with retry-safe logging.
+- Insights charts include lightweight linear regression forecasts (based on the latest 10–20 readings) with dashed projection lines and inline prediction labels.
 - Customize the dashboard further by adding new services, background tasks, or persistent storage as needed.
 # API_Dashboard
