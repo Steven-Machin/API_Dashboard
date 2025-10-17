@@ -106,3 +106,25 @@ class WeatherHistory(db.Model):
             f"<WeatherHistory id={self.id} timestamp={self.timestamp.isoformat()} "
             f"temp={self.temperature} condition={self.condition!r}>"
         )
+
+
+class AnomalyLog(db.Model):
+    """Record detected anomalies for audit and UI notifications."""
+
+    __tablename__ = "anomaly_log"
+
+    id = db.Column(db.Integer, primary_key=True)
+    timestamp = db.Column(
+        db.DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc),
+        index=True,
+    )
+    event_type = db.Column(db.String(64), nullable=False)
+    message = db.Column(db.String(255), nullable=False)
+
+    def __repr__(self) -> str:
+        return (
+            f"<AnomalyLog id={self.id} type={self.event_type!r} "
+            f"timestamp={self.timestamp.isoformat()}>"
+        )

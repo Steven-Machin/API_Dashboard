@@ -25,6 +25,7 @@ from app.services.weather_service import get_weather_forecast
 from app.services.history_service import (
     calculate_crypto_change,
     calculate_weather_average,
+    has_recent_anomalies,
     get_crypto_history,
     get_weather_history,
 )
@@ -119,7 +120,11 @@ def insights():
         "crypto": calculate_crypto_change(),
         "weather": calculate_weather_average(),
     }
-    return render_template("insights.html", insights_metrics=metrics)
+    return render_template(
+        "insights.html",
+        insights_metrics=metrics,
+        anomaly_alert=has_recent_anomalies(),
+    )
 
 
 @main_bp.route("/api/crypto_history")

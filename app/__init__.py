@@ -11,7 +11,15 @@ from .routes.crypto import crypto_bp
 from .routes.main import main_bp
 from .routes.news import news_bp
 from .routes.weather import weather_bp
+from .scheduler import start_scheduler
 from config import APP_VERSION
+
+
+def _env_flag(name: str, default: bool) -> bool:
+    raw = os.environ.get(name)
+    if raw is None:
+        return default
+    return raw.strip().lower() in {"1", "true", "yes", "on"}
 
 
 def create_app() -> Flask:
@@ -26,6 +34,16 @@ def create_app() -> Flask:
         "SQLALCHEMY_DATABASE_URI", os.environ.get("DATABASE_URL", "sqlite:///app.db")
     )
     app.config.setdefault("SQLALCHEMY_TRACK_MODIFICATIONS", False)
+    app.config.setdefault(
+        "ENABLE_DAILY_SUMMARY", _env_flag("ENABLE_DAILY_SUMMARY", default=True)
+    )
+    app.config.setdefault(
+        "SCHEDULER_TIMEZONE", os.environ.get("SCHEDULER_TIMEZONE", "UTC")
+    )
+
+    webhook_url = os.environ.get("DAILY_SUMMARY_WEBHOOK_URL")
+    if webhook_url:
+        app.config.setdefault("DAILY_SUMMARY_WEBHOOK_URL", webhook_url)
 
     db.init_app(app)
     login_manager.init_app(app)
@@ -49,5 +67,7 @@ def create_app() -> Flask:
     @app.context_processor
     def inject_version() -> dict[str, str | None]:
         return {"app_version": app.config.get("APP_VERSION")}
+
+    start_scheduler(app)
 
     return app
