@@ -11,7 +11,18 @@ except ImportError as exc:
 
 load_dotenv()
 
+BASE_DIR = os.path.dirname(__file__)
+TEMPLATE_DIR = os.path.join(BASE_DIR, "app", "templates")
+
 app = create_app()
+app.template_folder = TEMPLATE_DIR
+if app.jinja_loader:
+    searchpath = [TEMPLATE_DIR, *app.jinja_loader.searchpath]
+    # Preserve order while removing duplicates
+    seen = set()
+    app.jinja_loader.searchpath = [
+        path for path in searchpath if not (path in seen or seen.add(path))
+    ]
 app.secret_key = os.getenv(
     "SECRET_KEY", "supersecret123"
 )  # Replace with a strong key in production environments.
