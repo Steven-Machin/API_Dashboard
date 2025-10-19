@@ -44,19 +44,9 @@
           </form>
 
           <hr class="my-4">
-
-          {% try %}
-            {% set register_url = url_for('auth.register') %}
-          {% except %}
-            {% set register_url = None %}
-          {% endtry %}
           <p class="mb-0 text-center">
             Don't have an account?
-            {% if register_url %}
-              <a href="{{ register_url }}">Register here</a>
-            {% else %}
-              <span class="text-muted">Contact your administrator to request access.</span>
-            {% endif %}
+            <a href="#" class="text-decoration-none">Contact your administrator to request access.</a>
           </p>
         </div>
       </div>

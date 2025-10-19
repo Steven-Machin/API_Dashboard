@@ -13,6 +13,7 @@
     {% block extra_head %}{% endblock %}
   </head>
   <body class="{% block body_class %}{% endblock %}">
+    {% set has_register = True %}
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
         <div class="container pt-3">
