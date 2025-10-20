@@ -39,6 +39,10 @@
       rel="stylesheet"
       href="{{ url_for('static', filename='css/theme.css') }}"
     >
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/settings.css') }}"
+    >
     <script>
       (() => {
         const STORAGE_KEY = "api-dashboard:theme";
@@ -58,7 +62,7 @@
       })();
     </script>
   </head>
-  <body class="d-flex flex-column min-vh-100">
+  <body class="settings-body d-flex flex-column min-vh-100">
     <nav class="navbar navbar-expand-lg navbar-theme">
       <div class="container d-flex align-items-center gap-3 flex-wrap flex-lg-nowrap">
         <a class="navbar-brand fw-semibold mb-0" href="{{ url_for('main.index') }}">API Dashboard</a>

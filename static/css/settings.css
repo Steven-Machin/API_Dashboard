@@ -1,0 +1,317 @@
+body.settings-body {
+  background: linear-gradient(135deg, #e0f7fa, #e3f2fd);
+  font-family: "Inter", "Segoe UI", sans-serif;
+  margin: 0;
+  padding: 0;
+  color: #222222;
+}
+
+html.theme-dark body.settings-body {
+  background: linear-gradient(135deg, #0f172a, #1e293b);
+  color: #f1f5f9;
+}
+
+.settings-page {
+  padding: 0 1rem;
+  flex: 1;
+}
+
+.settings-container {
+  max-width: 900px;
+  margin: 60px auto;
+  background: rgba(255, 255, 255, 0.82);
+  border-radius: 14px;
+  padding: 40px 50px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  animation: settingsFadeIn 0.8s ease-in-out;
+}
+
+html.theme-dark .settings-container {
+  background: rgba(22, 36, 58, 0.88);
+  box-shadow: 0 18px 36px rgba(0, 0, 0, 0.55);
+}
+
+@keyframes settingsFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.settings-header {
+  background: linear-gradient(90deg, #00c6fb, #005bea, #00a5ff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-size: 2.2rem;
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 12px;
+}
+
+.settings-subtext {
+  text-align: center;
+  color: #555555;
+  font-size: 1rem;
+  margin-bottom: 36px;
+}
+
+html.theme-dark .settings-subtext {
+  color: rgba(226, 232, 240, 0.75);
+}
+
+.settings-card {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(245, 247, 250, 0.92) 100%);
+  border-radius: 12px;
+  padding: 28px 30px;
+  margin-bottom: 32px;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+}
+
+html.theme-dark .settings-card {
+  background: linear-gradient(180deg, rgba(30, 41, 59, 0.92) 0%, rgba(15, 23, 42, 0.9) 100%);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.45);
+}
+
+.settings-card h2 {
+  font-size: 1.4rem;
+  margin-bottom: 18px;
+  color: #333333;
+  border-bottom: 2px solid #80d4d8;
+  display: inline-block;
+  padding-bottom: 8px;
+}
+
+html.theme-dark .settings-card h2 {
+  color: #e2e8f0;
+  border-bottom-color: #38bdf8;
+}
+
+.settings-checkbox-group {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.settings-checkbox {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 14px 18px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px solid rgba(0, 180, 204, 0.22);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border 0.2s ease;
+}
+
+.settings-checkbox:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.08);
+  border-color: rgba(0, 180, 204, 0.4);
+  background: rgba(255, 255, 255, 0.88);
+}
+
+.settings-checkbox span {
+  font-weight: 600;
+  color: #1f2933;
+}
+
+.settings-checkbox small {
+  display: block;
+  color: #6b7280;
+  font-size: 0.85rem;
+  margin-top: 6px;
+}
+
+.settings-checkbox input[type="checkbox"] {
+  accent-color: #00b4cc;
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+html.theme-dark .settings-checkbox {
+  background: rgba(30, 41, 59, 0.75);
+  border-color: rgba(56, 189, 248, 0.35);
+}
+
+html.theme-dark .settings-checkbox:hover {
+  background: rgba(30, 41, 59, 0.9);
+  border-color: rgba(125, 211, 252, 0.5);
+  box-shadow: 0 16px 24px rgba(2, 6, 23, 0.45);
+}
+
+html.theme-dark .settings-checkbox span {
+  color: #f8fafc;
+}
+
+html.theme-dark .settings-checkbox small {
+  color: #94a3b8;
+}
+
+.settings-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 22px;
+}
+
+.settings-field label {
+  font-weight: 600;
+  color: #374151;
+}
+
+html.theme-dark .settings-field label {
+  color: #e2e8f0;
+}
+
+.settings-container input[type="text"],
+.settings-container input[type="number"] {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid #cccccc;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  background: rgba(255, 255, 255, 0.92);
+  color: inherit;
+  transition: border 0.2s ease, box-shadow 0.2s ease;
+}
+
+.settings-container input[type="text"]:focus,
+.settings-container input[type="number"]:focus {
+  border-color: #00b4cc;
+  box-shadow: 0 0 0 3px rgba(0, 180, 204, 0.15);
+  outline: none;
+}
+
+html.theme-dark .settings-container input[type="text"],
+html.theme-dark .settings-container input[type="number"] {
+  background: rgba(15, 23, 42, 0.85);
+  border-color: rgba(148, 163, 184, 0.35);
+  color: #e2e8f0;
+}
+
+html.theme-dark .settings-container input[type="text"]:focus,
+html.theme-dark .settings-container input[type="number"]:focus {
+  border-color: #38bdf8;
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2);
+}
+
+.settings-form-helper {
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+html.theme-dark .settings-form-helper {
+  color: #94a3b8;
+}
+
+.settings-form-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.settings-container button,
+.settings-container input[type="submit"] {
+  background: linear-gradient(90deg, #00c6fb, #005bea);
+  border: none;
+  border-radius: 8px;
+  color: #ffffff;
+  padding: 12px 20px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.25s ease, filter 0.2s ease;
+}
+
+.settings-container button:hover,
+.settings-container button:focus-visible,
+.settings-container input[type="submit"]:hover,
+.settings-container input[type="submit"]:focus-visible {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 24px rgba(0, 91, 234, 0.28);
+  filter: brightness(1.03);
+  outline: none;
+}
+
+.settings-status {
+  margin-top: 12px;
+  color: #007bff;
+  font-weight: 500;
+  text-align: center;
+}
+
+html.theme-dark .settings-status {
+  color: #38bdf8;
+}
+
+.settings-footer {
+  margin-top: 40px;
+  text-align: center;
+  color: #666666;
+  font-size: 0.88rem;
+}
+
+.settings-footer a {
+  color: #007bff;
+  text-decoration: none;
+}
+
+.settings-footer a:hover {
+  text-decoration: underline;
+}
+
+html.theme-dark .settings-footer {
+  color: rgba(203, 213, 225, 0.85);
+}
+
+.settings-toast-container {
+  position: fixed;
+  top: 2rem;
+  right: 2rem;
+  z-index: 1300;
+}
+
+.settings-toast-container .toast {
+  border-radius: 10px;
+  background: linear-gradient(135deg, rgba(0, 198, 251, 0.95), rgba(0, 91, 234, 0.95)) !important;
+  color: #ffffff;
+  box-shadow: 0 12px 24px rgba(0, 91, 234, 0.25);
+  border: none;
+}
+
+@media (max-width: 768px) {
+  .settings-container {
+    padding: 32px 24px;
+    margin: 40px 0;
+  }
+
+  .settings-card {
+    padding: 22px 20px;
+  }
+
+  .settings-form-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .settings-container button,
+  .settings-container input[type="submit"] {
+    width: 100%;
+  }
+
+  .settings-toast-container {
+    right: 1.25rem;
+    left: 1.25rem;
+  }
+}
