@@ -2,7 +2,7 @@
 
 from datetime import datetime, timezone
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, current_app, jsonify, request
 from flask_login import login_required
 
 from app.services.settings_service import get_user_settings
@@ -18,7 +18,29 @@ def weather():
     settings = get_user_settings()
     requested_city = (request.args.get("city") or "").strip()
     target_city = requested_city or settings.default_city
-    data = get_weather_forecast(target_city)
+    try:
+        data = get_weather_forecast(target_city) or {}
+    except Exception as exc:  # pragma: no cover - defensive
+        current_app.logger.exception("Failed to fetch weather data")
+        return (
+            jsonify(
+                {
+                    "city": target_city or settings.default_city,
+                    "temperature": None,
+                    "condition": None,
+                    "humidity": None,
+                    "wind_speed": None,
+                    "error": "Weather data unavailable",
+                    "details": str(exc),
+                    "last_updated": datetime.now(timezone.utc).isoformat(),
+                }
+            ),
+            200,
+        )
+
+    if not isinstance(data, dict):
+        data = {}
+
     main = data.get("main", {}) if isinstance(data, dict) else {}
     wind = data.get("wind", {}) if isinstance(data, dict) else {}
     weather_list = data.get("weather") if isinstance(data, dict) else []

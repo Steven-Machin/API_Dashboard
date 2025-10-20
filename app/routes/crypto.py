@@ -2,7 +2,7 @@
 
 from datetime import datetime, timezone
 
-from flask import Blueprint, jsonify
+from flask import Blueprint, current_app, jsonify
 from flask_login import login_required
 
 from app.services.crypto_service import get_crypto_prices
@@ -14,7 +14,26 @@ crypto_bp = Blueprint("crypto", __name__)
 @crypto_bp.route("/crypto")
 @login_required
 def crypto():
-    data = get_crypto_prices()
+    try:
+        data = get_crypto_prices() or {}
+    except Exception as exc:  # pragma: no cover - defensive
+        current_app.logger.exception("Failed to fetch crypto prices")
+        return (
+            jsonify(
+                {
+                    "bitcoin": {},
+                    "ethereum": {},
+                    "error": "Crypto data unavailable",
+                    "details": str(exc),
+                    "last_updated": datetime.now(timezone.utc).isoformat(),
+                }
+            ),
+            200,
+        )
+
+    if not isinstance(data, dict):
+        data = {}
+
     bitcoin_price = data.get("bitcoin", {}).get("usd")
     ethereum_price = data.get("ethereum", {}).get("usd")
 
@@ -25,8 +44,8 @@ def crypto():
         save_crypto_data(bitcoin_price, ethereum_price)
 
     payload = {
-        "bitcoin": data.get("bitcoin", {}),
-        "ethereum": data.get("ethereum", {}),
+        "bitcoin": data.get("bitcoin", {}) if isinstance(data, dict) else {},
+        "ethereum": data.get("ethereum", {}) if isinstance(data, dict) else {},
         "last_updated": datetime.now(timezone.utc).isoformat(),
     }
     return jsonify(payload)

@@ -564,7 +564,7 @@
       aria-hidden="false"
     >
       <div class="spinner-border text-primary" aria-hidden="true"></div>
-      <span class="loading-message text-muted small">Loading dashboard...</span>
+      <span id="dashboard-status" class="loading-message text-muted small">Loading dashboard...</span>
     </div>
     <nav class="navbar navbar-expand-lg shadow-sm navbar-theme">
         <div class="container py-2 d-flex align-items-center gap-3">
@@ -1005,6 +1005,12 @@
           activeCount: 0,
           hideTimerId: null,
         };
+        const dashboardStatusEl = document.getElementById("dashboard-status");
+
+        const setDashboardStatus = (message) => {
+          if (!dashboardStatusEl) return;
+          dashboardStatusEl.textContent = message || "";
+        };
 
         const updateGlobalSpinnerVisibility = () => {
           if (!globalSpinnerState.el) return;
@@ -1028,6 +1034,7 @@
         const showGlobalSpinner = () => {
           if (!globalSpinnerState.el) return;
           globalSpinnerState.activeCount += 1;
+          setDashboardStatus("Loading dashboard...");
           updateGlobalSpinnerVisibility();
         };
 
@@ -1041,11 +1048,15 @@
               globalSpinnerState.activeCount - 1
             );
           }
+          if (globalSpinnerState.activeCount === 0) {
+            setDashboardStatus("");
+          }
           updateGlobalSpinnerVisibility();
         };
 
         if (globalSpinnerState.el) {
           globalSpinnerState.activeCount = 1;
+          setDashboardStatus("Loading dashboard...");
           updateGlobalSpinnerVisibility();
         }
 
@@ -1519,47 +1530,83 @@
 
         async function performRefresh(type, options = {}) {
           const target = refreshTargets[type];
-          if (!target || refreshLocks[type]) return;
+          const isForce = Boolean(options.force);
+          if (!target) return null;
+          if (refreshLocks[type] && !isForce) return null;
           const { button, endpoint, card, column } = target;
-          if (!endpoint) return;
+          if (!endpoint) return null;
+
+          const cardHidden =
+            Boolean(column?.classList?.contains("d-none")) ||
+            !currentSettings[`show_${type}`];
+          const shouldDisableButton = Boolean(button) && !options.silentButtonDisable;
+
+          let requestUrl = endpoint;
+          if (options.params && typeof options.params === "object") {
+            try {
+              const url = new URL(endpoint, window.location.origin);
+              Object.entries(options.params).forEach(([key, value]) => {
+                if (value === undefined || value === null || value === "") return;
+                url.searchParams.set(key, value);
+              });
+              requestUrl = url.toString();
+            } catch (error) {
+              console.warn(`Unable to apply params for ${type} refresh`, error);
+            }
+          }
 
           refreshLocks[type] = true;
           showGlobalSpinner();
-          if (button) {
+
+          if (shouldDisableButton) {
             button.disabled = true;
             button.classList.add("disabled");
           }
+
           setRefreshingState(card, true);
 
           try {
-            const response = await fetch(endpoint, { cache: "no-store" });
+            const response = await fetch(requestUrl, { cache: "no-store" });
             if (!response.ok) {
               throw new Error(`Request failed: ${response.status}`);
             }
             const payload = await response.json();
-            updaters[type](payload);\r\n            if (!cardHidden) {\r\n              triggerCardFlash(card, "success");\r\n            }
+            if (payload && payload.error) {
+              throw new Error(payload.error);
+            }
+            updaters[type](payload);
+            if (!cardHidden) {
+              triggerCardFlash(card, "success");
+            }
             if (!options.silentSuccess) {
               const successMessage = successMessages[type] || "Refresh complete";
               const variant = successMessages[type] ? type : "crypto";
               showRefreshToast(variant, successMessage);
             }
+            return payload;
           } catch (error) {
             console.error(`Failed to refresh ${type} data:`, error);
-            handleRefreshFailure(type);\r\n            if (!cardHidden) {\r\n              triggerCardFlash(card, "error");\r\n            }
+            handleRefreshFailure(type);
+            if (!cardHidden) {
+              triggerCardFlash(card, "error");
+            }
             if (!options.silentFailure) {
               const failureMessage = failureMessages[type] || "Refresh failed.";
               showRefreshToast("error", failureMessage);
             }
+            return null;
           } finally {
             setRefreshingState(card, false);
-            if (button) {
+            if (shouldDisableButton) {
               button.disabled = false;
               button.classList.remove("disabled");
             }
             hideGlobalSpinner();
             refreshLocks[type] = false;
           }
-        }\r\n\r\n        buttons.forEach((button) => {
+        }
+
+        buttons.forEach((button) => {
           const endpoint = button.dataset.refreshEndpoint;
           const type = button.dataset.refreshType;
           if (!endpoint || !type || !(type in updaters)) return;
@@ -1571,6 +1618,24 @@
           button.addEventListener("click", () => {
             performRefresh(type, { source: "manual" });
           });
+        });
+
+        const initialRefreshPromises = refreshOrder
+          .filter(
+            (type) =>
+              refreshTargets[type] && currentSettings[`show_${type}`]
+          )
+          .map((type) =>
+            performRefresh(type, {
+              source: "initial",
+              silentSuccess: true,
+              silentFailure: true,
+              silentButtonDisable: true,
+            })
+          );
+
+        Promise.allSettled(initialRefreshPromises).finally(() => {
+          hideGlobalSpinner(true);
         });
 
         const refreshAllViaShortcut = async () => {
@@ -1758,7 +1823,9 @@
               source: "settings",
               silentSuccess: true,
               silentFailure: true,
-              force: true,\r\n              params,\r\n              silentButtonDisable: true,
+              force: true,
+              params,
+              silentButtonDisable: true,
             });
           }
 
@@ -1855,10 +1922,6 @@
             startAutoRefresh();
           }
         }
-
-        window.requestAnimationFrame(() => {
-          hideGlobalSpinner();
-        });
       });
     </script>
 
