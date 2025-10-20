@@ -22,6 +22,23 @@
       type="image/svg+xml"
       href="{{ url_for('static', filename='img/favicon.svg') }}"
     >
+    <link
+      rel="preconnect"
+      href="https://fonts.googleapis.com"
+    >
+    <link
+      rel="preconnect"
+      href="https://fonts.gstatic.com"
+      crossorigin
+    >
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    >
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/theme.css') }}"
+    >
     <script>
       (() => {
         const STORAGE_KEY = "api-dashboard:theme";
@@ -46,56 +63,56 @@
         --crypto-grad: linear-gradient(135deg, #0f766e, #fbbf24);
         --weather-grad: linear-gradient(135deg, #38bdf8, #fde68a);
         --news-grad: linear-gradient(135deg, #1e293b, #0f172a);
-        --surface-base: #f8fafc;
+        --surface-base: var(--background-light, #f7f9fb);
         --surface-card: rgba(255, 255, 255, 0.85);
         --surface-card-alt: rgba(226, 232, 240, 0.35);
         --surface-border: rgba(15, 23, 42, 0.08);
-        --text-primary: #0f172a;
+        --text-primary: var(--text-dark, #222222);
         --text-muted: #64748b;
         --text-subtle: #475569;
         --link-hover: #1d4ed8;
-        --navbar-bg: rgba(255, 255, 255, 0.92);
-        --navbar-brand: #0f172a;
-        --navbar-muted: #64748b;
-        --navbar-button-bg: rgba(15, 23, 42, 0.05);
-        --navbar-button-bg-hover: rgba(15, 23, 42, 0.12);
-        --navbar-button-border: rgba(100, 116, 139, 0.3);
-        --navbar-button-text: #0f172a;
-        --footer-bg: rgba(15, 23, 42, 0.92);
-        --footer-text: #94a3b8;
-        --card-shadow: 0 12px 30px -12px rgba(15, 23, 42, 0.35);
-        --card-shadow-hover: 0 18px 40px -16px rgba(15, 23, 42, 0.45);
+        --navbar-bg: linear-gradient(90deg, #005bea, #00c6fb);
+        --navbar-brand: #ffffff;
+        --navbar-muted: rgba(255, 255, 255, 0.9);
+        --navbar-button-bg: rgba(255, 255, 255, 0.12);
+        --navbar-button-bg-hover: rgba(255, 255, 255, 0.2);
+        --navbar-button-border: rgba(255, 255, 255, 0.18);
+        --navbar-button-text: #ffffff;
+        --footer-bg: linear-gradient(90deg, #00c6fb, #005bea);
+        --footer-text: #ffffff;
+        --card-shadow: var(--shadow-soft, 0 4px 10px rgba(0, 0, 0, 0.08));
+        --card-shadow-hover: 0 8px 16px rgba(0, 0, 0, 0.1);
         --timestamp-highlight: #0f172a;
         --overlay-bg: rgba(255, 255, 255, 0.75);
       }
 
       html.theme-dark {
         color-scheme: dark;
-        --surface-base: #050b16;
+        --surface-base: var(--background-dark, #0d1117);
         --surface-card: rgba(10, 20, 35, 0.92);
         --surface-card-alt: rgba(148, 163, 184, 0.18);
         --surface-border: rgba(94, 112, 146, 0.4);
-        --text-primary: #e2e8f0;
+        --text-primary: var(--text-light, #f5f5f5);
         --text-muted: #94a3b8;
         --text-subtle: #cbd5f5;
         --link-hover: #60a5fa;
-        --navbar-bg: rgba(8, 15, 26, 0.9);
+        --navbar-bg: linear-gradient(90deg, #001f4d, #003c71);
         --navbar-brand: #f8fafc;
-        --navbar-muted: rgba(148, 163, 184, 0.82);
-        --navbar-button-bg: rgba(15, 23, 42, 0.65);
-        --navbar-button-bg-hover: rgba(148, 163, 184, 0.25);
-        --navbar-button-border: rgba(148, 163, 184, 0.45);
+        --navbar-muted: rgba(236, 244, 255, 0.95);
+        --navbar-button-bg: rgba(255, 255, 255, 0.12);
+        --navbar-button-bg-hover: rgba(255, 255, 255, 0.2);
+        --navbar-button-border: rgba(255, 255, 255, 0.24);
         --navbar-button-text: #f8fafc;
-        --footer-bg: rgba(2, 6, 12, 0.92);
-        --footer-text: #64748b;
-        --card-shadow: 0 20px 40px -20px rgba(0, 0, 0, 0.65);
-        --card-shadow-hover: 0 26px 54px -24px rgba(2, 6, 23, 0.72);
+        --footer-bg: linear-gradient(90deg, #003c71, #001f4d);
+        --footer-text: #e2e8f0;
+        --card-shadow: 0 16px 36px rgba(0, 0, 0, 0.4);
+        --card-shadow-hover: 0 20px 46px rgba(0, 0, 0, 0.5);
         --timestamp-highlight: #f1f5f9;
         --overlay-bg: rgba(15, 23, 42, 0.75);
       }
 
       body {
-        background-color: var(--surface-base);
+        background: var(--surface-base);
         color: var(--text-primary);
         padding-bottom: 4rem;
         transition: background-color 0.4s ease, color 0.4s ease;
@@ -107,35 +124,51 @@
 
       .navbar-theme {
         background: var(--navbar-bg);
-        backdrop-filter: blur(12px);
-        border-bottom: 1px solid var(--surface-border);
-        transition: background-color 0.4s ease, border-color 0.4s ease, color 0.4s ease;
+        color: #ffffff;
+        position: sticky;
+        top: 0;
+        z-index: 1000;
+        box-shadow: var(--card-shadow);
+        border: none;
       }
 
-      .navbar-theme .navbar-brand {
-        color: var(--navbar-brand);
-        transition: color 0.4s ease;
+      .navbar-theme .container {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1.5rem;
+        padding: 0.75rem 0;
+      }
+
+      .navbar-theme .navbar-brand,
+      .navbar-theme .nav-muted,
+      .navbar-theme .theme-nav-btn {
+        color: #ffffff;
+        transition: opacity 0.3s ease, transform 0.25s ease;
       }
 
       .navbar-theme .navbar-brand:hover,
       .navbar-theme .navbar-brand:focus-visible {
-        color: var(--navbar-brand);
         opacity: 0.85;
       }
 
+      .navbar-theme .theme-nav-btn:hover,
+      .navbar-theme .theme-nav-btn:focus-visible {
+        transform: translateY(-1px);
+      }
+
       .navbar-theme .nav-muted {
-        color: var(--navbar-muted);
-        transition: color 0.4s ease;
+        opacity: 0.9;
       }
 
       .navbar-version {
         align-items: center;
-        background: var(--surface-card-alt, rgba(148, 163, 184, 0.18));
-        border: 1px solid var(--surface-border, rgba(100, 116, 139, 0.18));
+        background: rgba(255, 255, 255, 0.12);
+        border: 1px solid rgba(255, 255, 255, 0.18);
         border-radius: 999px;
-        color: var(--navbar-muted, rgba(71, 85, 105, 0.95));
+        color: inherit;
         display: inline-flex;
-        font-size: 0.7rem;
+        font-size: 0.75rem;
         font-weight: 600;
         letter-spacing: 0.08em;
         padding: 0.25rem 0.75rem;
@@ -239,23 +272,6 @@
         border-color: #2563eb;
       }
 
-      .app-footer {
-        background: var(--footer-bg);
-        color: var(--footer-text);
-        font-size: 0.85rem;
-        left: 0;
-        bottom: 0;
-        padding: 0.75rem 0;
-        position: fixed;
-        width: 100%;
-        z-index: 1030;
-        transition: background-color 0.4s ease, color 0.4s ease;
-      }
-
-      .app-footer .footer-about-btn {
-        border-width: 1px;
-      }
-
       .global-loading-overlay {
         align-items: center;
         background: var(--overlay-bg);
@@ -297,21 +313,21 @@
 
       .card-section {
         border: 1px solid var(--surface-border);
-        border-radius: 1rem;
+        border-radius: var(--card-radius, 12px);
         box-shadow: var(--card-shadow);
         color: var(--text-primary);
         min-height: 100%;
         overflow: hidden;
         position: relative;
         transform: translateY(0);
-        transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.35s ease, color 0.35s ease, background-color 0.35s ease;
+        transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.35s ease, color 0.35s ease, background-color 0.35s ease;
       }
 
       @media (hover: hover) and (pointer: fine) {
         .card-section:hover,
         .card-section:focus-within {
-          transform: translateY(-6px);
-          box-shadow: var(--card-shadow-hover);
+          transform: translateY(-3px);
+          box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
         }
       }
 
@@ -524,13 +540,13 @@
 
       .btn-refresh {
         border-radius: 999px;
-        transition: transform 180ms ease, box-shadow 180ms ease;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
       }
 
       .btn-refresh:hover,
       .btn-refresh:focus-visible {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 16px -8px rgba(59, 130, 246, 0.6);
+        transform: translateY(-1px);
+        box-shadow: 0 6px 14px rgba(0, 123, 255, 0.18);
       }
 
       .btn-refresh:disabled {
@@ -566,8 +582,8 @@
       <div class="spinner-border text-primary" aria-hidden="true"></div>
       <span id="dashboard-status" class="loading-message text-muted small">Loading dashboard...</span>
     </div>
-    <nav class="navbar navbar-expand-lg shadow-sm navbar-theme">
-        <div class="container py-2 d-flex align-items-center gap-3">
+    <nav class="navbar navbar-expand-lg navbar-theme">
+        <div class="container d-flex align-items-center gap-3 flex-wrap flex-lg-nowrap">
           <a class="navbar-brand fw-semibold mb-0" href="{{ url_for('main.index') }}">API Dashboard</a>
           <div class="d-flex align-items-center gap-3 ms-auto">
             <span class="navbar-version">{{ app_version }}</span>
@@ -631,46 +647,50 @@
         </div>
       </div>
     </div>
-    <main class="container flex-grow-1 py-5">
-      <div class="text-center mb-5">
-        <h1 class="display-5 fw-bold text-dark">API Dashboard</h1>
-        <p class="text-muted mb-0">
+    <main class="dashboard-container flex-grow-1">
+      <section class="dashboard-hero text-center">
+        <h1 class="display-5 fw-bold dashboard-title">API Dashboard</h1>
+        <p class="dashboard-subtitle mb-0">
           Monitor cryptocurrencies, weather, and headlines side-by-side.
         </p>
-      </div>
+      </section>
 
       {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
-          <div class="row justify-content-center mb-4">
-            <div class="col-12 col-lg-8">
-              {% for category, message in messages %}
-                <div class="alert alert-{{ category }} mb-2" role="alert">
-                  {{ message }}
-                </div>
-              {% endfor %}
+          <section class="dashboard-alerts">
+            <div class="row justify-content-center">
+              <div class="col-12 col-lg-8">
+                {% for category, message in messages %}
+                  <div class="alert alert-{{ category }} mb-2" role="alert">
+                    {{ message }}
+                  </div>
+                {% endfor %}
+              </div>
             </div>
-          </div>
+          </section>
         {% endif %}
       {% endwith %}
-      <div class="row g-4 justify-content-center">
-        <div
-          class="col-12 col-md-6 col-lg-4 {% if not show_crypto %}d-none{% endif %}"
-          data-card="crypto"
-        >
-          <div class="card card-section h-100" data-theme="crypto">
-            <div
-              class="card-refresh-overlay fade d-flex align-items-center justify-content-center"
-            >
-              <div class="spinner-border text-primary" role="status" aria-hidden="true"></div>
-              <span class="visually-hidden">Refreshing</span>
-            </div>
-            <div class="card-header d-flex align-items-center">
-              <span class="card-icon">
-                <i class="fa-solid fa-coins"></i>
-              </span>
-              <h5 class="card-title mb-0">Crypto Prices</h5>
-            </div>
-            <div class="card-body">
+
+      <section class="dashboard-sections">
+        <div class="row g-4 justify-content-center">
+          <div
+            class="col-12 col-md-6 col-lg-4 {% if not show_crypto %}d-none{% endif %}"
+            data-card="crypto"
+          >
+            <div class="card card-section h-100" data-theme="crypto">
+              <div
+                class="card-refresh-overlay fade d-flex align-items-center justify-content-center"
+              >
+                <div class="spinner-border text-primary" role="status" aria-hidden="true"></div>
+                <span class="visually-hidden">Refreshing</span>
+              </div>
+              <div class="card-header d-flex align-items-center">
+                <span class="card-icon">
+                  <i class="fa-solid fa-coins"></i>
+                </span>
+                <h5 class="card-title mb-0">Crypto Prices</h5>
+              </div>
+              <div class="card-body">
               {% set btc_price = (crypto_prices or {}).get('bitcoin', {}).get('usd') %}
               {% set eth_price = (crypto_prices or {}).get('ethereum', {}).get('usd') %}
               {% set formatted_updated = crypto_last_updated.strftime('%Y-%m-%d %H:%M:%S UTC') if crypto_last_updated else None %}
@@ -897,6 +917,7 @@
           </div>
         </div>
       </div>
+      </section>
     </main>
 
     <script id="dashboard-settings-data" type="application/json">
@@ -1925,12 +1946,12 @@
       });
     </script>
 
-    <footer class="app-footer text-center">
+    <footer class="footer">
       <div class="container d-flex flex-column flex-sm-row align-items-center justify-content-center gap-3">
-        <small class="mb-0">API Dashboard &copy; 2025 &ndash; Built by Steven Machin</small>
+        <p class="mb-0">API Dashboard &copy; 2025 | Built by Steven Machin</p>
         <button
           type="button"
-          class="btn btn-sm btn-outline-light footer-about-btn"
+          class="btn btn-sm footer-about-btn"
           data-bs-toggle="modal"
           data-bs-target="#aboutModal"
         >
