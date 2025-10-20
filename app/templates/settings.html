@@ -22,209 +22,189 @@
       type="image/svg+xml"
       href="{{ url_for('static', filename='img/favicon.svg') }}"
     >
-    <style>
-      body {
-        background: #f1f5f9;
-        padding-bottom: 4rem;
-      }
-
-      .page-header {
-        border-bottom: 1px solid rgba(148, 163, 184, 0.3);
-      }
-
-      .card-settings {
-        border-radius: 1rem;
-        box-shadow: 0 14px 45px -18px rgba(15, 23, 42, 0.45);
-      }
-
-      .app-footer {
-        background: rgba(15, 23, 42, 0.92);
-        color: #94a3b8;
-        font-size: 0.85rem;
-        left: 0;
-        bottom: 0;
-        padding: 0.75rem 0;
-        position: fixed;
-        width: 100%;
-        z-index: 1030;
-      }
-
-      .navbar-version {
-        align-items: center;
-        background: rgba(148, 163, 184, 0.15);
-        border: 1px solid rgba(148, 163, 184, 0.32);
-        border-radius: 999px;
-        color: rgba(226, 232, 240, 0.78);
-        display: inline-flex;
-        font-size: 0.7rem;
-        font-weight: 600;
-        letter-spacing: 0.08em;
-        padding: 0.25rem 0.75rem;
-        text-transform: uppercase;
-        white-space: nowrap;
-      }
-    </style>
+    <link
+      rel="preconnect"
+      href="https://fonts.googleapis.com"
+    >
+    <link
+      rel="preconnect"
+      href="https://fonts.gstatic.com"
+      crossorigin
+    >
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    >
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/theme.css') }}"
+    >
+    <script>
+      (() => {
+        const STORAGE_KEY = "api-dashboard:theme";
+        let preferred = "light";
+        try {
+          const stored = window.localStorage.getItem(STORAGE_KEY);
+          if (stored === "dark" || stored === "light") {
+            preferred = stored;
+          }
+        } catch (error) {
+          console.warn("Unable to read stored theme preference", error);
+        }
+        const root = document.documentElement;
+        root.setAttribute("data-theme", preferred);
+        root.classList.remove("theme-dark", "theme-light");
+        root.classList.add(`theme-${preferred}`);
+      })();
+    </script>
   </head>
   <body class="d-flex flex-column min-vh-100">
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
-      <div class="container py-2 d-flex align-items-center gap-3">
-        <a class="navbar-brand fw-semibold mb-0" href="{{ url_for('main.index') }}">
-          API Dashboard
-        </a>
-        <div class="ms-auto d-flex align-items-center gap-3">
+    <nav class="navbar navbar-expand-lg navbar-theme">
+      <div class="container d-flex align-items-center gap-3 flex-wrap flex-lg-nowrap">
+        <a class="navbar-brand fw-semibold mb-0" href="{{ url_for('main.index') }}">API Dashboard</a>
+        <div class="d-flex align-items-center gap-3 ms-auto">
           <span class="navbar-version">{{ app_version }}</span>
+          <a class="btn btn-sm theme-nav-btn" href="{{ url_for('main.index') }}">Dashboard</a>
           <a
+            class="btn btn-sm theme-nav-btn{% if request.endpoint == 'main.insights' %} active{% endif %}"
             href="{{ url_for('main.insights') }}"
-            class="btn btn-sm btn-outline-light"
           >
             Insights
           </a>
-          <a
-            href="{{ url_for('main.index') }}"
-            class="btn btn-sm btn-outline-light"
-          >
-            Back to Dashboard
-          </a>
           {% if current_user.is_authenticated %}
-            <div class="text-white-50 small d-none d-md-flex align-items-center gap-2">
+            <div class="nav-muted small d-none d-md-flex align-items-center gap-2">
               <i class="fa-solid fa-user-circle"></i>
               <span>{{ current_user.email }}</span>
             </div>
-            <a class="btn btn-sm btn-outline-light" href="{{ url_for('auth.logout') }}">
-              Logout
-            </a>
+            <a class="btn btn-sm theme-nav-btn" href="{{ url_for('auth.logout') }}">Logout</a>
           {% endif %}
+          <button
+            class="theme-toggle-btn"
+            type="button"
+            id="theme-toggle"
+            aria-label="Switch to dark mode"
+            aria-pressed="false"
+            title="Switch to dark mode"
+          >
+            <i class="fa-solid fa-moon" data-theme-icon="dark" aria-hidden="true"></i>
+            <i class="fa-solid fa-sun" data-theme-icon="light" aria-hidden="true"></i>
+          </button>
         </div>
       </div>
     </nav>
 
-    <main class="container flex-grow-1 py-5">
-      <header class="page-header mb-4">
-        <h1 class="h3 fw-bold text-dark mb-1">Dashboard Settings</h1>
-        <p class="text-muted mb-0">
-          Configure which data cards to display and default refresh preferences.
-        </p>
-      </header>
+    <main class="settings-page flex-grow-1">
+      <div class="settings-container">
+        <header class="mb-4">
+          <h1 class="settings-header">Dashboard Settings</h1>
+          <p class="settings-subtext">
+            Configure which data cards to display and adjust the default refresh preferences.
+          </p>
+        </header>
 
-      <div class="row justify-content-center">
-        <div class="col-12 col-lg-8">
-          <div class="card card-settings border-0">
-            <div class="card-body p-4 p-lg-5">
-              {% with messages = get_flashed_messages(with_categories=true) %}
-                {% if messages %}
-                  <div class="mb-4">
-                    {% for category, message in messages %}
-                      <div class="alert alert-{{ category }} mb-2" role="alert">
-                        {{ message }}
-                      </div>
-                    {% endfor %}
-                  </div>
-                {% endif %}
-              {% endwith %}
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            <div class="mb-3">
+              {% for category, message in messages %}
+                <div class="settings-status" role="status">{{ message }}</div>
+              {% endfor %}
+            </div>
+          {% endif %}
+        {% endwith %}
 
-              <form id="settings-form" method="post" action="{{ url_for('main.settings') }}">
-                <section class="mb-4">
-                  <h2 class="h5 text-dark fw-semibold mb-3">Visibility</h2>
-                  <div class="form-check form-switch mb-3">
-                    <input
-                      class="form-check-input"
-                      type="checkbox"
-                      role="switch"
-                      id="toggle-crypto"
-                      name="show_crypto"
-                      value="1"
-                      data-setting-toggle="show_crypto"
-                      {% if settings.show_crypto %}checked{% endif %}
-                    >
-                    <label class="form-check-label" for="toggle-crypto">
-                      Show Crypto
-                    </label>
-                  </div>
-                  <div class="form-check form-switch mb-3">
-                    <input
-                      class="form-check-input"
-                      type="checkbox"
-                      role="switch"
-                      id="toggle-weather"
-                      name="show_weather"
-                      value="1"
-                      data-setting-toggle="show_weather"
-                      {% if settings.show_weather %}checked{% endif %}
-                    >
-                    <label class="form-check-label" for="toggle-weather">
-                      Show Weather
-                    </label>
-                  </div>
-                  <div class="form-check form-switch">
-                    <input
-                      class="form-check-input"
-                      type="checkbox"
-                      role="switch"
-                      id="toggle-news"
-                      name="show_news"
-                      value="1"
-                      data-setting-toggle="show_news"
-                      {% if settings.show_news %}checked{% endif %}
-                    >
-                    <label class="form-check-label" for="toggle-news">
-                      Show News
-                    </label>
-                  </div>
-                </section>
-
-                <section class="mb-4">
-                  <h2 class="h5 text-dark fw-semibold mb-3">Preferences</h2>
-                  <div class="mb-3">
-                    <label class="form-label" for="default-city">
-                      Default City
-                    </label>
-                    <input
-                      type="text"
-                      class="form-control"
-                      id="default-city"
-                      name="default_city"
-                      placeholder="Enter city name"
-                      data-setting-input="default_city"
-                      value="{{ settings.default_city }}"
-                    >
-                    <div class="form-text">
-                      Used for weather forecasts when no city is provided.
-                    </div>
-                  </div>
-                  <div class="mb-3">
-                    <label class="form-label" for="auto-refresh-interval">
-                      Auto-refresh Interval (minutes)
-                    </label>
-                    <input
-                      type="number"
-                      class="form-control"
-                      id="auto-refresh-interval"
-                      min="1"
-                      step="1"
-                      placeholder="5"
-                      name="auto_refresh_interval"
-                      data-setting-input="refresh_interval"
-                      value="{{ settings.refresh_interval }}"
-                    >
-                    <div class="form-text">
-                      Applies when auto-refresh is enabled on the dashboard.
-                    </div>
-                  </div>
-                </section>
-
-                <div class="d-flex justify-content-end">
-                  <button type="submit" class="btn btn-primary px-4">
-                    Save Settings
-                  </button>
+        <form id="settings-form" method="post" action="{{ url_for('main.settings') }}">
+          <div class="settings-card">
+            <h2>Visibility</h2>
+            <div class="settings-checkbox-group">
+              <label class="settings-checkbox">
+                <input
+                  type="checkbox"
+                  id="toggle-crypto"
+                  name="show_crypto"
+                  value="1"
+                  data-setting-toggle="show_crypto"
+                  {% if settings.show_crypto %}checked{% endif %}
+                >
+                <div>
+                  <span>Show Crypto Prices</span>
+                  <small>Display live Bitcoin and Ethereum pricing on your dashboard.</small>
                 </div>
-              </form>
+              </label>
+              <label class="settings-checkbox">
+                <input
+                  type="checkbox"
+                  id="toggle-weather"
+                  name="show_weather"
+                  value="1"
+                  data-setting-toggle="show_weather"
+                  {% if settings.show_weather %}checked{% endif %}
+                >
+                <div>
+                  <span>Show Weather</span>
+                  <small>Keep current conditions and hourly forecasts within reach.</small>
+                </div>
+              </label>
+              <label class="settings-checkbox">
+                <input
+                  type="checkbox"
+                  id="toggle-news"
+                  name="show_news"
+                  value="1"
+                  data-setting-toggle="show_news"
+                  {% if settings.show_news %}checked{% endif %}
+                >
+                <div>
+                  <span>Show News</span>
+                  <small>Surface the latest curated headlines from your preferred sources.</small>
+                </div>
+              </label>
             </div>
           </div>
-        </div>
+
+          <div class="settings-card">
+            <h2>Preferences</h2>
+            <div class="settings-field">
+              <label for="default-city">Default City</label>
+              <input
+                type="text"
+                id="default-city"
+                name="default_city"
+                placeholder="Enter city name"
+                data-setting-input="default_city"
+                value="{{ settings.default_city }}"
+                autocomplete="off"
+              >
+              <span class="settings-form-helper">
+                Used for weather forecasts when no manual city is provided.
+              </span>
+            </div>
+            <div class="settings-field">
+              <label for="auto-refresh-interval">Auto-refresh Interval (minutes)</label>
+              <input
+                type="number"
+                id="auto-refresh-interval"
+                min="1"
+                step="1"
+                name="auto_refresh_interval"
+                data-setting-input="refresh_interval"
+                value="{{ settings.refresh_interval }}"
+              >
+              <span class="settings-form-helper">
+                Applies whenever auto-refresh is enabled on the dashboard.
+              </span>
+            </div>
+          </div>
+
+          <div class="settings-form-actions">
+            <button type="submit">
+              Save Settings
+            </button>
+          </div>
+        </form>
       </div>
     </main>
 
-    <div class="position-fixed top-0 end-0 p-3" style="z-index: 1200">
+    <div class="settings-toast-container">
       <div
         id="settings-toast"
         class="toast text-bg-primary border-0 shadow-sm fade"
@@ -240,9 +220,9 @@
       </div>
     </div>
 
-    <footer class="bg-dark text-white-50 py-3">
-      <div class="container text-center small">
-        &copy; API Dashboard &middot; Settings
+    <footer class="footer">
+      <div class="container d-flex flex-column flex-sm-row align-items-center justify-content-center gap-3">
+        <p class="mb-0">API Dashboard &copy; 2025 | Settings</p>
       </div>
     </footer>
 
@@ -253,6 +233,62 @@
     ></script>
     <script>
       document.addEventListener("DOMContentLoaded", () => {
+        const THEME_STORAGE_KEY = "api-dashboard:theme";
+        const rootDocumentEl = document.documentElement;
+        const themeToggleButton = document.getElementById("theme-toggle");
+
+        const readStoredTheme = () => {
+          const attrTheme =
+            rootDocumentEl.getAttribute("data-theme") === "dark" ? "dark" : "light";
+          try {
+            const stored = window.localStorage.getItem(THEME_STORAGE_KEY);
+            if (stored === "dark" || stored === "light") {
+              return stored;
+            }
+          } catch (error) {
+            console.warn("Unable to read theme preference", error);
+          }
+          return attrTheme;
+        };
+
+        const persistTheme = (theme) => {
+          try {
+            window.localStorage.setItem(THEME_STORAGE_KEY, theme);
+          } catch (error) {
+            console.warn("Unable to persist theme preference", error);
+          }
+        };
+
+        const renderToggleState = (theme) => {
+          if (!themeToggleButton) return;
+          const isDark = theme === "dark";
+          const label = isDark ? "Switch to light mode" : "Switch to dark mode";
+          themeToggleButton.setAttribute("aria-pressed", isDark ? "true" : "false");
+          themeToggleButton.setAttribute("aria-label", label);
+          themeToggleButton.setAttribute("title", label);
+        };
+
+        const applyTheme = (theme) => {
+          const nextTheme = theme === "dark" ? "dark" : "light";
+          rootDocumentEl.setAttribute("data-theme", nextTheme);
+          rootDocumentEl.classList.remove("theme-dark", "theme-light");
+          rootDocumentEl.classList.add(`theme-${nextTheme}`);
+          renderToggleState(nextTheme);
+          return nextTheme;
+        };
+
+        applyTheme(readStoredTheme());
+
+        if (themeToggleButton) {
+          themeToggleButton.addEventListener("click", () => {
+            const currentTheme =
+              rootDocumentEl.getAttribute("data-theme") === "dark" ? "dark" : "light";
+            const nextTheme = currentTheme === "dark" ? "light" : "dark";
+            applyTheme(nextTheme);
+            persistTheme(nextTheme);
+          });
+        }
+
         const form = document.getElementById("settings-form");
         if (!form) return;
 
