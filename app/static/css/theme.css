@@ -1,7 +1,7 @@
 :root {
-  --primary-color: #007bff;
-  --accent-color: #ffcc70;
-  --background-light: #f7f9fb;
+  --primary-color: #005bea;
+  --accent-color: #00c6fb;
+  --background-light: #f5f8ff;
   --background-dark: #0d1117;
   --card-radius: 12px;
   --shadow-soft: 0 4px 10px rgba(0, 0, 0, 0.08);
@@ -10,7 +10,7 @@
 }
 
 body {
-  background: var(--background-light);
+  background: linear-gradient(135deg, #e0f7fa, #e3f2fd);
   font-family: "Inter", sans-serif;
   color: var(--text-dark);
   margin: 0;
@@ -25,7 +25,12 @@ h3 {
 }
 
 a {
-  color: inherit;
+  color: var(--primary-color);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
 }
 
 .navbar-theme {
