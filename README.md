@@ -22,6 +22,16 @@ This project demonstrates a modular Flask application that aggregates data from 
    flask --app run.py --debug run
    ```
 
+### Database Migrations
+
+Use Flask-Migrate to manage schema changes without recreating the database:
+
+```bash
+flask db init
+flask db migrate -m "add new fields"
+flask db upgrade
+```
+
 The app exposes JSON endpoints at `/crypto`, `/weather`, and `/news` and a dashboard view at `/`.
 
 ## Project Structure

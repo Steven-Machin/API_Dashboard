@@ -4,7 +4,7 @@ import os
 
 from flask import Flask
 
-from .extensions import db, login_manager
+from .extensions import db, login_manager, migrate
 from .models import User
 from .routes.auth import auth_bp
 from .routes.crypto import crypto_bp
@@ -48,6 +48,7 @@ def create_app() -> Flask:
     db.init_app(app)
     login_manager.init_app(app)
     login_manager.login_view = "auth.login"
+    migrate.init_app(app, db)
 
     @login_manager.user_loader
     def load_user(user_id: str) -> User | None:
