@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import os
 
+from datetime import datetime
+
 from flask import Flask
 
 from .extensions import db, login_manager, migrate
@@ -66,8 +68,11 @@ def create_app() -> Flask:
         db.create_all()
 
     @app.context_processor
-    def inject_version() -> dict[str, str | None]:
-        return {"app_version": app.config.get("APP_VERSION")}
+    def inject_version() -> dict[str, object]:
+        return {
+            "app_version": app.config.get("APP_VERSION"),
+            "datetime": datetime,
+        }
 
     start_scheduler(app)
 
