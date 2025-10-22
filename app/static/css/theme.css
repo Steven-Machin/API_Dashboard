@@ -158,6 +158,25 @@ a:hover {
   border-bottom: 1px solid rgba(0, 91, 234, 0.12);
 }
 
+.error-container {
+  text-align: center;
+  padding: 100px 20px;
+}
+
+.error-container h1 {
+  font-size: 5rem;
+  color: var(--primary-color);
+}
+
+.error-container a {
+  display: inline-block;
+  margin-top: 20px;
+  color: #ffffff;
+  background: linear-gradient(90deg, var(--accent-color), var(--primary-color));
+  padding: 10px 20px;
+  border-radius: 8px;
+}
+
 .footer {
   text-align: center;
   font-size: 0.85rem;

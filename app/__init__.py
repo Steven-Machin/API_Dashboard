@@ -4,7 +4,7 @@ import os
 
 from datetime import datetime
 
-from flask import Flask
+from flask import Flask, render_template
 
 from .extensions import db, login_manager, migrate
 from .models import User
@@ -73,6 +73,10 @@ def create_app() -> Flask:
             "app_version": app.config.get("APP_VERSION"),
             "datetime": datetime,
         }
+
+    @app.errorhandler(404)
+    def not_found(error):  # type: ignore[override]
+        return render_template("404.html"), 404
 
     start_scheduler(app)
 
