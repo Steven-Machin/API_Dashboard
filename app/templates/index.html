@@ -272,39 +272,6 @@
         border-color: #2563eb;
       }
 
-      .global-loading-overlay {
-        align-items: center;
-        background: var(--overlay-bg);
-        display: flex;
-        flex-direction: column;
-        gap: 1rem;
-        inset: 0;
-        justify-content: center;
-        opacity: 0;
-        padding: 1.5rem;
-        pointer-events: none;
-        position: fixed;
-        text-align: center;
-        transition: opacity 0.3s ease, visibility 0.3s ease, background-color 0.3s ease;
-        visibility: hidden;
-        z-index: 2000;
-      }
-
-      .global-loading-overlay.is-visible {
-        opacity: 1;
-        pointer-events: auto;
-        visibility: visible;
-      }
-
-      .global-loading-overlay .spinner-border {
-        height: 3rem;
-        width: 3rem;
-      }
-
-      .global-loading-overlay .loading-message {
-        color: var(--text-muted);
-      }
-
       footer.bg-dark {
         background: var(--footer-bg) !important;
         color: var(--footer-text) !important;
@@ -572,16 +539,15 @@
     data-show-weather="{{ 'true' if show_weather else 'false' }}"
     data-show-news="{{ 'true' if show_news else 'false' }}"
   >
-    <div
-      id="global-loading-spinner"
-      class="global-loading-overlay is-visible"
-      role="status"
-      aria-live="polite"
-      aria-hidden="false"
-    >
-      <div class="spinner-border text-primary" aria-hidden="true"></div>
-      <span id="dashboard-status" class="loading-message text-muted small">Loading dashboard...</span>
-    </div>
+    {% include '_spinner.html' %}
+    <script>
+      window.addEventListener("load", () => {
+        const overlay = document.querySelector(".spinner-overlay");
+        if (!overlay) return;
+        overlay.style.display = "none";
+        overlay.setAttribute("aria-hidden", "true");
+      });
+    </script>
     <nav class="navbar navbar-expand-lg navbar-theme">
         <div class="container d-flex align-items-center gap-3 flex-wrap flex-lg-nowrap">
           <a class="navbar-brand fw-semibold mb-0" href="{{ url_for('main.index') }}">API Dashboard</a>
@@ -1022,15 +988,9 @@
         const THEME_STORAGE_KEY = "api-dashboard:theme";
 
         const globalSpinnerState = {
-          el: document.getElementById("global-loading-spinner"),
+          el: document.querySelector(".spinner-overlay"),
           activeCount: 0,
           hideTimerId: null,
-        };
-        const dashboardStatusEl = document.getElementById("dashboard-status");
-
-        const setDashboardStatus = (message) => {
-          if (!dashboardStatusEl) return;
-          dashboardStatusEl.textContent = message || "";
         };
 
         const updateGlobalSpinnerVisibility = () => {
@@ -1040,12 +1000,12 @@
             globalSpinnerState.hideTimerId = null;
           }
           if (globalSpinnerState.activeCount > 0) {
-            globalSpinnerState.el.classList.add("is-visible");
+            globalSpinnerState.el.style.display = "flex";
             globalSpinnerState.el.setAttribute("aria-hidden", "false");
           } else {
             globalSpinnerState.hideTimerId = window.setTimeout(() => {
               if (!globalSpinnerState.el) return;
-              globalSpinnerState.el.classList.remove("is-visible");
+              globalSpinnerState.el.style.display = "none";
               globalSpinnerState.el.setAttribute("aria-hidden", "true");
               globalSpinnerState.hideTimerId = null;
             }, 150);
@@ -1055,7 +1015,6 @@
         const showGlobalSpinner = () => {
           if (!globalSpinnerState.el) return;
           globalSpinnerState.activeCount += 1;
-          setDashboardStatus("Loading dashboard...");
           updateGlobalSpinnerVisibility();
         };
 
@@ -1069,15 +1028,13 @@
               globalSpinnerState.activeCount - 1
             );
           }
-          if (globalSpinnerState.activeCount === 0) {
-            setDashboardStatus("");
-          }
           updateGlobalSpinnerVisibility();
         };
 
         if (globalSpinnerState.el) {
           globalSpinnerState.activeCount = 1;
-          setDashboardStatus("Loading dashboard...");
+          globalSpinnerState.el.style.display = "flex";
+          globalSpinnerState.el.setAttribute("aria-hidden", "false");
           updateGlobalSpinnerVisibility();
         }
 
