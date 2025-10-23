@@ -1876,6 +1876,17 @@
           if (event.repeat) return;
           const key = typeof event.key === "string" ? event.key.toLowerCase() : "";
           if (key !== "r") return;
+
+          if ((event.ctrlKey || event.metaKey) && !event.altKey) {
+            event.preventDefault();
+            Promise.resolve(refreshAllViaShortcut()).finally(() => {
+              if (typeof window.showToast === "function") {
+                window.showToast("Dashboard data reloaded!");
+              }
+            });
+            return;
+          }
+
           if (event.altKey || event.ctrlKey || event.metaKey) return;
           const activeElement = document.activeElement;
           const targetElement = event.target || activeElement;
