@@ -278,6 +278,27 @@ html.theme-dark .footer .footer-about-btn {
   border-color: rgba(255, 255, 255, 0.25);
 }
 
+#backToTop {
+  display: none;
+  position: fixed;
+  bottom: 25px;
+  right: 25px;
+  background: linear-gradient(90deg, var(--accent-color), var(--primary-color));
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 45px;
+  height: 45px;
+  font-size: 1.3rem;
+  cursor: pointer;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+  transition: transform 0.2s ease-in-out;
+}
+
+#backToTop:hover {
+  transform: translateY(-3px);
+}
+
 .spinner-overlay {
   display: flex;
   justify-content: center;
