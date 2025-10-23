@@ -299,6 +299,27 @@ html.theme-dark .footer .footer-about-btn {
   transform: translateY(-3px);
 }
 
+#toast {
+  visibility: hidden;
+  min-width: 250px;
+  background: linear-gradient(90deg, var(--accent-color), var(--primary-color));
+  color: #fff;
+  text-align: center;
+  border-radius: 8px;
+  padding: 12px;
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  z-index: 1000;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+#toast.show {
+  visibility: visible;
+  opacity: 1;
+}
+
 .spinner-overlay {
   display: flex;
   justify-content: center;
