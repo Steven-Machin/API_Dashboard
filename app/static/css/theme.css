@@ -157,6 +157,17 @@ a:hover {
   box-shadow: 0 0 15px rgba(0, 198, 251, 0.4);
 }
 
+.tooltip {
+  background: var(--primary-color);
+  color: white;
+  border-radius: 50%;
+  padding: 0 7px;
+  cursor: help;
+  font-weight: bold;
+  font-size: 0.8rem;
+  margin-left: 8px;
+}
+
 .btn-refresh {
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }

@@ -654,7 +654,10 @@
                 <span class="card-icon">
                   <i class="fa-solid fa-coins"></i>
                 </span>
-                <h5 class="card-title mb-0">Crypto Prices</h5>
+                <h5 class="card-title mb-0">
+                  Crypto Prices
+                  <span class="tooltip" title="Shows latest market data">?</span>
+                </h5>
               </div>
               <div class="card-body">
               {% set btc_price = (crypto_prices or {}).get('bitcoin', {}).get('usd') %}
@@ -726,7 +729,10 @@
               <span class="card-icon">
                 <i class="fa-solid fa-cloud-sun"></i>
               </span>
-              <h5 class="card-title mb-0">Weather Forecast</h5>
+              <h5 class="card-title mb-0">
+                Weather Forecast
+                <span class="tooltip" title="Provides current local conditions">?</span>
+              </h5>
             </div>
             <div class="card-body">
               {% set temp = (weather_data or {}).get('main', {}).get('temp') if weather_data else None %}
@@ -815,7 +821,10 @@
               <span class="card-icon">
                 <i class="fa-solid fa-newspaper"></i>
               </span>
-              <h5 class="card-title mb-0">News Headlines</h5>
+              <h5 class="card-title mb-0">
+                News Headlines
+                <span class="tooltip" title="Highlights today's top stories">?</span>
+              </h5>
             </div>
             <div class="card-body">
                 {% set news_items = (news_headlines or []) %}
