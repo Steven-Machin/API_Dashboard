@@ -304,6 +304,17 @@ html.theme-dark .footer .footer-about-btn {
   border-color: rgba(255, 255, 255, 0.25);
 }
 
+#progress-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 3px;
+  width: 0;
+  background: linear-gradient(90deg, var(--accent-color), var(--primary-color));
+  z-index: 9999;
+  transition: width 0.3s ease, opacity 0.3s ease;
+}
+
 #backToTop {
   display: none;
   position: fixed;
