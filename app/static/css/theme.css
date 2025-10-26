@@ -421,3 +421,12 @@ input[type="submit"]:active::after {
   height: 200px;
   opacity: 0;
 }
+
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus {
+  outline: none;
+  border-color: var(--accent-color);
+  box-shadow: 0 0 8px rgba(0, 198, 251, 0.4);
+  transition: box-shadow 0.25s ease;
+}
