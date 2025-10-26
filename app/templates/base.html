@@ -50,7 +50,7 @@
     {% block content %}{% endblock %}
 
     <footer class="footer">
-      <p>API Dashboard {{ config.APP_VERSION }} â€” Updated {{ datetime.utcnow().strftime('%Y-%m-%d') }}</p>
+      <p>© <span id="year"></span> API Dashboard · Built by Steven Machin</p>
     </footer>
 
     <div id="toast"></div>
@@ -99,6 +99,12 @@
     <script>
       console.log("%cWelcome to Stevenâ€™s API Dashboard", "color: #00c6fb; font-size: 16px; font-weight: bold;");
       console.log("Built with Flask + Codex | Â© 2025 Steven Machin");
+    </script>
+    <script>
+      const yearEl = document.getElementById("year");
+      if (yearEl) {
+        yearEl.textContent = new Date().getFullYear();
+      }
     </script>
   </body>
 </html>
