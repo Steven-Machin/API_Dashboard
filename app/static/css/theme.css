@@ -435,3 +435,13 @@ input[type="password"]:focus {
   box-shadow: 0 0 8px rgba(0, 198, 251, 0.4);
   transition: box-shadow 0.25s ease;
 }
+
+.card {
+  transform-style: preserve-3d;
+  transition: transform 0.3s ease;
+}
+
+.card:hover {
+  transform: perspective(800px) rotateX(3deg) rotateY(-3deg);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.12);
+}
