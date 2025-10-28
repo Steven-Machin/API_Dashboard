@@ -445,3 +445,29 @@ input[type="password"]:focus {
   transform: perspective(800px) rotateX(3deg) rotateY(-3deg);
   box-shadow: 0 8px 18px rgba(0, 0, 0, 0.12);
 }
+
+a {
+  position: relative;
+  color: var(--primary-color);
+  text-decoration: none;
+  transition: color 0.25s ease;
+}
+
+a::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -2px;
+  width: 0%;
+  height: 2px;
+  background: linear-gradient(90deg, var(--accent-color), var(--primary-color));
+  transition: width 0.3s ease-in-out;
+}
+
+a:hover {
+  color: var(--accent-color);
+}
+
+a:hover::after {
+  width: 100%;
+}
