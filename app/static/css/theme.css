@@ -354,12 +354,14 @@ html.theme-dark .footer .footer-about-btn {
   right: 30px;
   z-index: 1000;
   opacity: 0;
-  transition: opacity 0.4s ease;
+  transform: translateY(20px);
+  transition: opacity 0.4s ease, transform 0.4s ease;
 }
 
 #toast.show {
   visibility: visible;
   opacity: 1;
+  transform: translateY(0);
 }
 
 .spinner-overlay {
