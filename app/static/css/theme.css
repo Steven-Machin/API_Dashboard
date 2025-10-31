@@ -480,3 +480,13 @@ a:hover {
 a:hover::after {
   width: 100%;
 }
+
+img {
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  transition: box-shadow 0.2s ease;
+}
+
+img:hover {
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+}
